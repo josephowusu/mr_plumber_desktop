@@ -1,0 +1,99 @@
+@font-face {
+    font-family: monBold;
+    src: url(fonts/Montserrat-Bold.ttf);
+}
+@font-face {
+    font-family: monRegular;
+    src: url(fonts/Montserrat-Regular.ttf);
+}
+@font-face {
+    font-family: monSemiBold;
+    src: url(fonts/Montserrat-SemiBold.ttf);
+}
+@font-face {
+    font-family: monMedium;
+    src: url(fonts/Montserrat-Medium.ttf);
+}
+
+html, body {
+    margin: 0px !important;
+    border: 0px !important;
+    padding: 0px !important;
+    overflow: hidden;
+    font-family: monRegular !important;
+    font-size: 12px;
+}
+
+body, input, textarea, select, button, label {
+    font-family: monRegular !important;
+}
+
+.title-bar {
+    display: flex;
+    font-family: monBold;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #008080;
+    color: white;
+    -webkit-app-region: drag;
+    font-weight: bold;
+    position: 'fixed';
+    z-index: 999999999999999;
+    top: 0px;
+    right: 0px;
+    left: 0px;
+    height: 35px;
+}
+.title-bar .controls {
+    display: flex;
+}
+.title-bar .controls button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    -webkit-app-region: no-drag; /* Exclude buttons from dragging */
+}
+.title-bar .controls .buttons:hover {
+    background-color: #555;
+}
+
+.title-bar .controls .danger:hover {
+    background-color: #b61a1a;
+}
+.title-bar .title-name {
+    padding: 10px;
+}
+
+
+::-webkit-scrollbar {
+    width: 5px; 
+}
+
+::-webkit-scrollbar-track {
+    background: #f0f0f0;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #888; 
+    border-radius: 10px; 
+    border: 2px solid #f0f0f0; 
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #555; 
+}
+
+* {
+    scrollbar-width: none; 
+    scrollbar-color: #888 #f0f0f0;
+}
+
+.scrollable-container {
+    height: 80vh!important;
+    overflow-y: auto !important;
+}
+/* modal-dialog-scrollable */

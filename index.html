@@ -2,15 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Electron App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <title>Mr Plumber</title>
+    <link href="assets/css/nucleo-icons.css" rel="stylesheet" />
+    <link href="assets/css/nucleo-svg.css" rel="stylesheet" />
+    <link href="assets/css/nucleo-svg.css" rel="stylesheet" />
+    <link id="pagestyle" href="assets/css/soft-ui-dashboard.css?v=1.0.7" rel="stylesheet" />
+    <link rel="stylesheet" href="./stylesheets/style.css" />
+    <link rel="stylesheet" href="./stylesheets/icon/all.css" />
 </head>
 <body>
-    <nav>
-        <a href="#" onclick="loadPage('dashboard')">Home</a>
-        <a href="#" onclick="loadPage('customer')">Customer</a>
-    </nav>
-    <div id="content"></div>
+    <div class="title-bar" style="background-color: #0275d8">
+        <div class="title-name">Mr Plumber</div>
+        <div class="controls">
+            <button id="minimize" class="buttons" style="margin-top: -8px;"><i class="fa-regular fa-window-minimize"></i></button>
+            <button id="maximize" class="buttons"><i class="fa-solid fa-maximize"></i></button>
+            <button id="close" class="danger"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+    <div id="contentWorkingArea"></div>
     <script src="renderer.js"></script>
+    <script src="component/Header.js"></script>
+    <script src="component/Footer.js"></script>
 </body>
 </html>

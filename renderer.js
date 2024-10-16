@@ -1,9 +1,8 @@
 const Swal = require('sweetalert2')
 const { ipcRenderer } = require('electron')
 
-
 function loadPage(page) {
-    const contentDiv = document.getElementById('content')
+    const contentDiv = document.getElementById('contentWorkingArea')
     if (contentDiv) {
         fetch(`pages/${page}.html`)
             .then(response => response.text())
@@ -11,6 +10,11 @@ function loadPage(page) {
                 contentDiv.innerHTML = html
             })
             .catch(error => {
+                Swal.fire({
+                    title: "Error",
+                    text: error.message,
+                    icon: "error"
+                })
                 console.log('Error', 'loading page:', error)
             })
     } else {
@@ -19,7 +23,37 @@ function loadPage(page) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadPage('dashboard')
+    loadPage('login')
+})
+
+document.getElementById('minimize').addEventListener('click', () => {
+    ipcRenderer.send('minimize-window')
+})
+  
+document.getElementById('maximize').addEventListener('click', () => {
+    ipcRenderer.send('maximize-window')
+})
+  
+document.getElementById('close').addEventListener('click', () => {
+    ipcRenderer.send('close-window')
+})
+
+const signInButton = document.getElementById('signInButton')
+if (signInButton) {
+    signInButton.addEventListener('click', () => {
+        ipcRenderer.send('login-user')
+    })
+} else {
+    console.log('button not found')
+}
+
+
+ipcRenderer.on('window-maximized', () => {
+    document.getElementById('maximize').innerHTML = '<i class="fa-solid fa-minimize"></i>';
+})
+
+ipcRenderer.on('window-unmaximized', () => {
+    document.getElementById('maximize').innerHTML = '<i class="fa-solid fa-maximize"></i>';
 })
 
 // // Function to export the database
