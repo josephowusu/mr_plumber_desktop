@@ -1,22 +1,18 @@
 const Swal = require('sweetalert2')
 const { ipcRenderer } = require('electron')
-
+// Swal.fire({
+//     title: "Error",
+//     text: error.message,
+//     icon: "error"
+// })
+const page_component = {
+    login: "<login-component></login-component>",
+    register: "<register-component></register-component>",
+}
 function loadPage(page) {
     const contentDiv = document.getElementById('contentWorkingArea')
     if (contentDiv) {
-        fetch(`pages/${page}.html`)
-            .then(response => response.text())
-            .then(html => {
-                contentDiv.innerHTML = html
-            })
-            .catch(error => {
-                Swal.fire({
-                    title: "Error",
-                    text: error.message,
-                    icon: "error"
-                })
-                console.log('Error', 'loading page:', error)
-            })
+        contentDiv.innerHTML = page_component[page]
     } else {
         console.log('Error', 'loading page:', 'Redering page not found')
     }
@@ -38,14 +34,16 @@ document.getElementById('close').addEventListener('click', () => {
     ipcRenderer.send('close-window')
 })
 
-const signInButton = document.getElementById('signInButton')
-if (signInButton) {
-    signInButton.addEventListener('click', () => {
-        ipcRenderer.send('login-user')
-    })
-} else {
-    console.log('button not found')
-}
+document.addEventListener('DOMContentLoaded', () => {
+    const signInButton = document.getElementById('signInButton')
+    if (signInButton) {
+        signInButton.addEventListener('click', () => {
+            ipcRenderer.send('login-user')
+        })
+    } else {
+        console.log('button not found')
+    }
+})
 
 
 ipcRenderer.on('window-maximized', () => {
