@@ -7,40 +7,31 @@ const db = new sqlite3.Database(path.join(__dirname, 'mr_plumber_shop.sqlite'), 
     if (err) {
         console.log("error: ", "Connection:", err.message);
     } else {
-        console.log("success", "Connection")
-        // db.run(`CREATE TABLE IF NOT EXISTS account (
-        //     id INTEGER PRIMARY KEY AUTOINCREMENT,
-        //     name TEXT,
-        //     password TEXT
-        // )`)
         db.run(`CREATE TABLE IF NOT EXISTS account (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
             password TEXT
         )`, (err) => {
             if (err) {
-                console.log("Error creating table:", err.message);
+                console.log("Error creating table:", err.message)
             } else {
-                // Insert default account if the table was just created
                 db.get("SELECT COUNT(*) AS count FROM account", [], (err, row) => {
                     if (err) {
-                        console.log("Error checking account count:", err.message);
+                        console.log("Error checking account count:", err.message)
                     } else if (row.count === 0) {
-                        // If no accounts exist, insert a default account
-                        const defaultName = 'admin';
-                        const defaultPassword = 'password123'; // Change to a secure password in production
-                        
+                        const defaultName = 'admin'
+                        const defaultPassword = 'password123'
                         db.run(`INSERT INTO account (name, password) VALUES (?, ?)`, [defaultName, defaultPassword], function(err) {
                             if (err) {
                                 console.log("Error inserting default account:", err.message);
                             } else {
                                 console.log(`Default account created with id: ${this.lastID}`);
                             }
-                        });
+                        })
                     }
-                });
+                })
             }
-        });
+        })
     }
 })
 
