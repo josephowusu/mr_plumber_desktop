@@ -23222,8 +23222,7 @@ html {
   background-image: linear-gradient(310deg, #fff 0%, #fff 100%);
 }
 
-.main-content,
-.sidenav {
+.main-content, .sidenav {
   transition: all 0.2s ease-in-out;
 }
 

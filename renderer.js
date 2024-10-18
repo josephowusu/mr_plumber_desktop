@@ -1,17 +1,20 @@
-const Swal = require('sweetalert2')
 const { ipcRenderer } = require('electron')
-// Swal.fire({
-//     title: "Error",
-//     text: error.message,
-//     icon: "error"
-// })
+const Swal = require('sweetalert2')
+const { storeData, fetchData } = require('./lib/Helper')
+
 const page_component = {
     login: "<login-component></login-component>",
     register: "<register-component></register-component>",
+    dashboard: "<dashboard-component></dashboard-component>",
+    productCategory: "<product-category-component></product-category-component>",
+    customer: "<customer-component></customer-component>",
+    stock: "<product-stock-component></product-stock-component>",
+    product: "<product-component></product-component>",
 }
+
 function loadPage(page) {
     const contentDiv = document.getElementById('contentWorkingArea')
-    if (contentDiv) {
+    if (contentDiv && page_component[page]) {
         contentDiv.innerHTML = page_component[page]
     } else {
         console.log('Error', 'loading page:', 'Redering page not found')
@@ -19,7 +22,13 @@ function loadPage(page) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadPage('login')
+    let session = fetchData('session')
+    let lastPage = fetchData('lastPage')
+    if (session) {
+        loadPage(lastPage ? lastPage : 'dashboard')
+    } else {
+        loadPage('login')
+    }
 })
 
 document.getElementById('minimize').addEventListener('click', () => {
@@ -34,17 +43,6 @@ document.getElementById('close').addEventListener('click', () => {
     ipcRenderer.send('close-window')
 })
 
-document.addEventListener('DOMContentLoaded', () => {
-    const signInButton = document.getElementById('signInButton')
-    if (signInButton) {
-        signInButton.addEventListener('click', () => {
-            ipcRenderer.send('login-user')
-        })
-    } else {
-        console.log('button not found')
-    }
-})
-
 
 ipcRenderer.on('window-maximized', () => {
     document.getElementById('maximize').innerHTML = '<i class="fa-solid fa-minimize"></i>';
@@ -54,12 +52,28 @@ ipcRenderer.on('window-unmaximized', () => {
     document.getElementById('maximize').innerHTML = '<i class="fa-solid fa-maximize"></i>';
 })
 
-// // Function to export the database
-// function exportDatabase() {
-//     ipcRenderer.send('export-db');
-// }
+const loginUserButtonAction = async (username, password) => {
+    ipcRenderer.send('login-user-account', {username, password})
+}
 
-// Add an event listener to a button for exporting
+ipcRenderer.on('login-user-account-status', (event, account) => {
+    Swal.fire({
+        title: 'Login',
+        text: account.message,
+        icon: account.status
+    })
+    if (account.status == "success") {
+        storeData('session', account.data)
+        setInterval(() => {
+            loadPage('dashboard')
+        }, 500)
+    }
+})
+
+function exportDatabase() {
+    ipcRenderer.send('export-db')
+}
+
 // document.getElementById('exportButton').addEventListener('click', () => {
 //     exportDatabase()
 //     Swal.fire({
@@ -71,12 +85,12 @@ ipcRenderer.on('window-unmaximized', () => {
 //     });
 // });
 
-// // Listen for a response from the main process
-// ipcRenderer.on('export-success', () => {
-//     Swal.fire({
-//         title: 'Success!',
-//         text: 'Database exported successfully!',
-//         icon: 'success',
-//         confirmButtonText: 'OK'
-//     });
-// });
+
+ipcRenderer.on('export-success', () => {
+    Swal.fire({
+        title: 'Success!',
+        text: 'Database exported successfully!',
+        icon: 'success',
+        confirmButtonText: 'OK'
+    })
+})
