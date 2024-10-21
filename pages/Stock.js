@@ -2,6 +2,7 @@ class ProductStockComponent extends HTMLElement {
 
     constructor() {
         super();
+        this.stockID = null
         this.#__init__();
     }
 
@@ -31,7 +32,7 @@ class ProductStockComponent extends HTMLElement {
                         <div class="col-12">
                             <div class="card mb-4">
                                 <div class="card-body px-0 pt-0 pb-2">
-                                    <div class="table-responsive p-0">
+                                    <div class="table-responsive p-0 scrollable-container">
                                         <table class="table align-items-center mb-0">
                                             <thead>
                                                 <tr>
@@ -92,81 +93,151 @@ class ProductStockComponent extends HTMLElement {
         if (addButton) {
             addButton.addEventListener('click', (e) => {
                 e.preventDefault();
+                this.stockID = null;
                 const modalForm = document.getElementById('modalProductStockForm');
                 if (modalForm) modalForm.reset();
                 const modal = new bootstrap.Modal(document.getElementById('productStockModal'));
                 modal.show();
             });
         }
-
+        
+    
+        // Handle save button click
         const saveUpdateButton = document.getElementById('saveUpdateButtonProductStock');
         if (saveUpdateButton) {
-            saveUpdateButton.addEventListener('click', (e) => {
+            saveUpdateButton.addEventListener('click', async (e) => {
                 e.preventDefault();
-                const productID = document.getElementById('productID').value
-                const quantity = document.getElementById('quantity').value
-
+                const productID = document.getElementById('productID').value;
+                const quantity = document.getElementById('quantity').value;
+    
                 if (productID && quantity) {
-                    ipcRenderer.send('saveProductStock', { productID, quantity });
+                    try {
+                        let save = await saveProductStock({ stockID: this.stockID, productID, quantity });
+                        if (save.success) {
+                            Swal.fire({
+                                title: 'Product Stock',
+                                text: 'Stock added successfully',
+                                icon: 'success',
+                            });
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('productStockModal'));
+                            modal.hide();
+                            this.#_fetchStock(); // Refresh stock list
+                        } else {
+                            Swal.fire({
+                                title: 'Product Stock',
+                                text: 'Error saving stock',
+                                icon: 'error',
+                            });
+                        }
+                    } catch (error) {
+                        console.log('error: ', error);
+                    }
                 }
-            })
+            });
         }
-
-        ipcRenderer.on('saveProductStockResponse', (event, response) => {
-            if (response.success) {
-                Swal.fire({
-                    title: 'Product Stock',
-                    text: 'Stock added successfully',
-                    icon: 'success'
-                })
-                const modal = bootstrap.Modal.getInstance(document.getElementById('productStockModal'))
-                modal.hide()
-                this.#_fetchStock()
-            } else {
-                Swal.fire({
-                    title: 'Product Stock',
-                    text: 'Error saving stock',
-                    icon: 'error'
-                })
+    
+        // Handle edit and delete actions for each row
+        const tableBody = document.querySelector('#tableBodyProductStock');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const target = e.target;
+                const stockID = target.getAttribute('data-id');
+                const action = target.getAttribute('data-action');
+    
+                if (action === 'edit') {
+                    this.#_editStock(stockID);
+                } else if (action === 'delete') {
+                    this.#_deleteStock(stockID);
+                }
+            });
+        }
+    }
+    
+    // Edit stock action
+    async #_editStock(stockID) {
+        try {
+            const stockData = await fetchProductStockById(stockID); // Fetch stock data by ID from backend
+            if (stockData.success) {
+                const modalForm = document.getElementById('modalProductStockForm');
+                if (modalForm) {
+                    document.getElementById('productID').value = stockData.data.productID;
+                    document.getElementById('quantity').value = stockData.data.quantity;
+                    this.stockID = stockData.data.id
+                    const modal = new bootstrap.Modal(document.getElementById('productStockModal'));
+                    modal.show()
+                }
             }
-        })
+        } catch (err) {
+            console.error(err.message);
+        }
+    }
+    
+    // Delete stock action
+    async #_deleteStock(stockID) {
+        try {
+            const confirmation = await Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+            });
+    
+            if (confirmation.isConfirmed) {
+                const result = await deleteProductStock(stockID); // Backend call to delete stock
+                if (result.success) {
+                    Swal.fire('Deleted!', 'Product stock has been deleted.', 'success');
+                    this.#_fetchStock()
+                } else {
+                    Swal.fire('Error!', 'Failed to delete product stock.', 'error');
+                }
+            }
+        } catch (err) {
+            console.error(err.message);
+        }
+    }
+    
 
-        ipcRenderer.on('fetchProductStockResponse', (event, response) => {
-            if (response.success) {
+    async #_fetchStock() {
+        try {
+            let data = await fetchProductStock()
+            console.log(data)
+            if (data.success) {
                 let html = ``;
-                response.data.forEach((stock) => {
+                for (let i = 0; i < data.data.length; i++) {
+                    const stock = data.data[i]
                     html += `
                         <tr>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${stock.name}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${stock.quantity}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${stock.status == "active" ? 'Active' : 'Inactive'}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${stock.name}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${stock.quantity}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${stock.status == "active" ? 'Active' : 'Inactive'}</td>
                             <td class="text-end">
-                                <button class="btn btn-secondary btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${stock.id}" onclick="">Edit</button>
-                                <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${stock.id}" onclick="">Delete</button>
+                                <button class="btn btn-secondary btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${stock.id}" data-action="edit">Edit</button>
+                                <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${stock.id}" data-action="delete">Delete</button>
                             </td>
                         </tr>
                     `
-                })
+                }
                 document.querySelector(`#tableBodyProductStock`).innerHTML = html
             }
-        })
+        } catch (err) {
+            console.error(err.message)
+        }
     }
 
-    #_fetchStock() {
-        ipcRenderer.send('fetchProductStock');
-    }
-
-    #_fetchProduct() {
-        ipcRenderer.send('fetchProducts')
-        ipcRenderer.on('fetchProductsResponse', (event, response) => {
-            if (response.success) {
-                let options = `<option value="" disabled selected>Select a category</option>`
-                for (let i = 0; i < response.data.length; i++) {
-                    options += `<option value="${response.data[i].id}">${response.data[i].name}</option>`
+    async #_fetchProduct() {
+        try {
+            let data = await getProducts()
+            if (data.success) {
+                let options = `<option value="" disabled selected>Select a product</option>`
+                for (let i = 0; i < data.data.length; i++) {
+                    options += `<option value="${data.data[i].id}">${data.data[i].name}</option>`
                 }
                 document.getElementById('productID').innerHTML = options
             }
-        })
+        }  catch (err) {
+            console.error(err.message)
+        }
     }
 }
 

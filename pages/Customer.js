@@ -2,7 +2,7 @@ class CustomerComponent extends HTMLElement {
 
     constructor() {
         super()
-        this.editingCustomerId = null
+        this.customerID = null
         this.#__init__()
     }
     
@@ -26,7 +26,7 @@ class CustomerComponent extends HTMLElement {
                                     <span class="input-group-text text-body"><i class="fas fa-search" aria-hidden="true"></i></span>
                                     <input type="text" class="form-control" placeholder="Type here...">
                                 </div>
-                                <button class="btn btn-success" style="margin-top: 10px; margin-left: 10px" id="addCustomerButton">Add</button>
+                                <button class="btn btn-success w-100" style="margin-top: 10px; margin-left: 10px" id="addCustomerButton">Add Customer</button>
                             </div>
                         </div>
                     </div>
@@ -111,49 +111,68 @@ class CustomerComponent extends HTMLElement {
 
         const saveUpdateButton = document.getElementById('saveUpdateButtonCustomer');
         if (saveUpdateButton) {
-            saveUpdateButton.addEventListener('click', (e) => {
+            saveUpdateButton.addEventListener('click', async (e) => {
                 e.preventDefault()
                 const customerName = document.getElementById('customerName').value;
                 const customerEmail = document.getElementById('customerEmail').value;
                 const customerPhone = document.getElementById('customerPhone').value;
                 if (customerName) {
-                    ipcRenderer.send('saveCustomer', {customerName, customerEmail, customerPhone})
+                    try {
+                        let save = await saveCustomer({customerID: this.customerID, customerName, customerEmail, customerPhone})
+                        if (save.success) {
+                            Swal.fire({
+                                title: 'Customer',
+                                text: 'Customer added successfully',
+                                icon: 'success'
+                            })
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+                            modal.hide()
+                            this.#_fetchCustomers()
+                        } else {
+                            Swal.fire({
+                                title: 'Customer',
+                                text: 'Error saving customer',
+                                icon: 'error'
+                            })
+                        }
+                    } catch (error) {
+                        console.log('error: ', error)
+                    }
                 }
             })
         }
 
-        ipcRenderer.on('saveCustomerResponse', (event, response) => {
-            if (response.success) {
-                Swal.fire({
-                    title: 'Customer',
-                    text: 'Customer added successfully',
-                    icon: 'success'
-                })
-                const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
-                modal.hide()
-                this.#_fetchCustomers()
-            } else {
-                Swal.fire({
-                    title: 'Customer',
-                    text: 'Error saving customer',
-                    icon: 'error'
-                })
-            }
-        })
+        const tableBody = document.querySelector('#tableBodyCustomer');
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const target = e.target;
+                const customerID = target.getAttribute('data-id');
+                const action = target.getAttribute('data-action');
+    
+                if (action === 'edit') {
+                    this.#_editCustomer(customerID)
+                } else if (action === 'delete') {
+                    this.#_deleteCustomer(customerID)
+                }
+            });
+        }
+    }
 
-        ipcRenderer.on('fetchCustomerResponse', (event, response) => {
-            if (response.success) {
+    async #_fetchCustomers() {
+        try {
+            let data = await fetchCustomers()
+            if (data.success) {
                 let html = ``
-                for (let i = 0; i < response.data.length; i++) {
-                    const customer = response.data[i]
+                for (let i = 0; i < data.data.length; i++) {
+                    const customer = data.data[i]
                     html += String.raw`
                         <tr>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${customer.name}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${customer.email}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${customer.phone}</td>
-                            <td class="text-end">
-                                <button class="btn btn-secondary btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${customer.id}" onclick="">Edit</button>
-                                <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${customer.id}" onclick="">Delete</button>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${customer.name}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${customer.email || '~'}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${customer.phone || '~'}</td>
+                            <td class="text-right">
+                                <button class="btn btn-secondary btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${customer.id}" data-action="edit">Edit</button>
+                                <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${customer.id}" data-action="delete">Delete</button>
                             </td>
                         </tr>
                     `
@@ -163,14 +182,53 @@ class CustomerComponent extends HTMLElement {
                     template.innerHTML = html
 					if (tableBody) tableBody.append(template.content.cloneNode(true))
                 }
-            } else {
-                console.log('Error fetching customers: ', response.error);
             }
-        })
+        } catch (error) {
+            console.log('error: ', error.message)
+        }
     }
 
-    #_fetchCustomers() {
-        ipcRenderer.send('fetchCustomers')
+    async #_editCustomer(customerID) {
+        try {
+            const data = await fetchCustomerById(customerID)
+            if (data.success) {
+                const { name, phone, email } = data.data
+                document.getElementById('customerName').value = name;
+                document.getElementById('customerPhone').value = phone;
+                document.getElementById('customerEmail').value = email
+                this.customerID = customerID
+                const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+                modal.show()
+            }
+        } catch (error) {
+            console.log('Error fetching customer: ', error.message);
+        }
+    }
+
+    async #_deleteCustomer(customerID) {
+        const confirmDelete = await Swal.fire({
+            title: 'Delete Customer',
+            text: 'Are you sure you want to delete this customer?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (confirmDelete.isConfirmed) {
+            try {
+                const deleteResponse = await deleteCustomer(customerID);
+                if (deleteResponse.success) {
+                    Swal.fire('Deleted!', 'Product has been deleted.', 'success');
+                    this.#_fetchCustomers();
+                } else {
+                    Swal.fire('Error!', 'Failed to delete product.', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting product: ', error.message);
+            }
+        }
     }
 
     disconnectedCallback() {

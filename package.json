@@ -1,17 +1,36 @@
 {
   "name": "mr_plumber_desktop",
   "version": "1.0.0",
-  "description": "",
+  "description": "plumbing shop software",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.mrplumber.id",
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "files": [
+      "**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    }
   },
   "keywords": [],
   "author": "WOCKTECH",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "sqlite3": "^5.1.7",

@@ -25,11 +25,11 @@ class LoginComponent extends HTMLElement {
                                             <form role="form">
                                                 <label style="font-size: 9pt;">Username</label>
                                                 <div class="mb-3">
-                                                    <input id="username" type="email" class="form-control p-3" placeholder="Email" aria-label="USername" value="admin" aria-describedby="email-addon">
+                                                    <input id="username" type="text" class="form-control p-3" placeholder="Username" aria-label="Username" aria-describedby="email-addon">
                                                 </div>
                                                 <label style="font-size: 9pt;">Password</label>
                                                 <div class="mb-3">
-                                                    <input id="password" type="password" class="form-control p-3" placeholder="Password" aria-label="Password" value="password123" aria-describedby="password-addon">
+                                                    <input id="password" type="password" class="form-control p-3" placeholder="Password" aria-label="Password" aria-describedby="password-addon">
                                                 </div>
                                                 <div class="text-center">
                                                     <button type="button" class="btn bg-gradient-info w-100 mt-4 mb-0 p-3" style="font-size: 10pt;" id="signInButton">Sign in</button>

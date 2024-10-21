@@ -2,7 +2,7 @@ class ProductComponent extends HTMLElement {
 
     constructor() {
         super()
-        this.editingProductId = null
+        this.productID = null
         this.#__init__();
     }
 
@@ -26,7 +26,7 @@ class ProductComponent extends HTMLElement {
                                     <span class="input-group-text text-body"><i class="fas fa-search" aria-hidden="true"></i></span>
                                     <input type="text" class="form-control" placeholder="Type here...">
                                 </div>
-                                <button class="btn btn-success" style="margin-top: 10px; margin-left: 10px" id="addProductButton">Add</button>
+                                <button class="btn btn-success w-100" style="margin-top: 10px; margin-left: 10px" id="addProductButton">Add Product</button>
                             </div>
                         </div>
                     </div>
@@ -40,10 +40,11 @@ class ProductComponent extends HTMLElement {
                                         <table class="table align-items-center mb-0">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Image</th>
+                                                    <!-- <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Image</th> -->
                                                     <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Product Name</th>
                                                     <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Category</th>
                                                     <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Quantity</th>
+                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Price</th>
                                                     <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Status</th>
                                                     <th class="text-secondary opacity-7"></th>
                                                 </tr>
@@ -103,7 +104,7 @@ class ProductComponent extends HTMLElement {
     connectedCallback() {
         this.#_addEvents()
         this.#_fetchProducts()
-        this.#_fetchCategories() // To populate product category dropdown
+        this.#_fetchCategories()
     }
 
     #_addEvents() {
@@ -113,7 +114,7 @@ class ProductComponent extends HTMLElement {
 				e.preventDefault()
 				const modalForm = document.getElementById('modalProductForm')
 				if (modalForm) modalForm.reset()
-				this.editingProductId = null
+				this.productId = null
 				const modal = new bootstrap.Modal(document.getElementById('productModal'))
 				modal.show()
 			})
@@ -121,7 +122,7 @@ class ProductComponent extends HTMLElement {
 
         const saveUpdateButton = document.getElementById('saveUpdateButtonProduct')
         if (saveUpdateButton) {
-            saveUpdateButton.addEventListener('click', (e) => {
+            saveUpdateButton.addEventListener('click', async (e) => {
                 e.preventDefault()
                 const productName = document.getElementById('productName').value
                 const productDescription = document.getElementById('productDescription').value
@@ -129,71 +130,139 @@ class ProductComponent extends HTMLElement {
                 const purchasePrice = document.getElementById('purchasePrice').value
                 const sellingPrice = document.getElementById('sellingPrice').value
                 if (productName && productCategoryID) {
-                    ipcRenderer.send('saveProduct', { productName, productDescription, productCategoryID, purchasePrice, sellingPrice })
+                    try {
+                        let save = await saveProduct({ productID: this.productID, name: productName, description: productDescription, 
+                            category: productCategoryID, price: purchasePrice, sellingPrice })
+                        if (save.success) {
+                            Swal.fire({
+                                title: 'Product',
+                                text: 'Product added successfully',
+                                icon: 'success'
+                            })
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'))
+                            modal.hide()
+                            this.#_fetchProducts()
+                        } else {
+                            Swal.fire({
+                                title: 'Product',
+                                text: 'Error saving product',
+                                icon: 'error'
+                            })
+                        }
+                    }catch (err) {
+                        console.error(err.message)
+                    }
                 }
             })
         }
 
-        ipcRenderer.on('saveProductResponse', (event, response) => {
-            if (response.success) {
-                Swal.fire({
-                    title: 'Product',
-                    text: 'Product added successfully',
-                    icon: 'success'
-                })
-                const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'))
-                modal.hide()
-                this.#_fetchProducts()
-            } else {
-                Swal.fire({
-                    title: 'Product',
-                    text: 'Error saving product',
-                    icon: 'error'
-                })
-            }
-        })
+        const tableBody = document.querySelector(`#tableBodyProduct`);
+        if (tableBody) {
+            tableBody.addEventListener('click', (e) => {
+                const target = e.target;
+                const productID = target.getAttribute('data-id');
+                const action = target.getAttribute('data-action');
+                if (action === 'edit') {
+                    this.#_editProduct(productID)
+                } else if (action === 'delete') {
+                    this.#_deleteProduct(productID)
+                }
+            })
+        }
+    }
 
-        
-
-        ipcRenderer.on('fetchProductsResponse', (event, response) => {
-            if (response.success) {
+    async #_fetchProducts() {
+        try {
+            let data = await getProducts()
+            if (data.success) {
                 let html = ``
-                for (let i = 0; i < response.data.length; i++) {
-                    const product = response.data[i]
-                    console.log(product)
+                for (let i = 0; i < data.data.length; i++) {
+                    const product = data.data[i]
                     html += String.raw`
                         <tr>
-                            <td style="font-family: monRegular !important; font-size: 8pt"><img src="${product.image}" alt="${product.name}" width="50"></td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${product.name}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${product.productCategoryName}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${product.quantity}</td>
-                            <td style="font-family: monRegular !important; font-size: 8pt">${product.status}</td>
+                            <!-- <td style="font-family: monRegular !important; font-size: 8pt; color: #000"><img src="${product.image}" alt="${product.name}" width="50"></td> -->
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${product.name}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${product.productCategoryName}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${product.quantity}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${product.sellingPrice}</td>
+                            <td style="font-family: monRegular !important; font-size: 8pt; color: #000">${product.status}</td>
                             <td class="text-right">
-                                <button class="btn btn-warning btn-sm" onclick="editProduct('${product.id}')">Edit</button>
+                                <button class="btn btn-secondary btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${product.id}" data-action="edit">Edit</button>
+                                <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${product.id}" data-action="delete">Delete</button>
                             </td>
                         </tr>
                     `
                 }
-                document.getElementById('tableBodyProduct').innerHTML = html
+                const tableBody = document.querySelector(`#tableBodyProduct`)
+                if (tableBody) tableBody.innerHTML = ''
+                const template = document.createElement('template')
+                template.innerHTML = html
+                if (tableBody) tableBody.append(template.content.cloneNode(true))
             }
-        })
+        } catch (err) {
+            console.error(err.message)
+        }
     }
+    
 
-    #_fetchProducts() {
-        ipcRenderer.send('fetchProducts')
-    }
-
-    #_fetchCategories() {
-        ipcRenderer.send('fetchProductCategories')
-        ipcRenderer.on('fetchProductCategoriesResponse', (event, response) => {
-            if (response.success) {
+    async #_fetchCategories() {
+        try {
+            let data = await fetchProductCategories()
+            if (data.success) {
                 let options = `<option value="" disabled selected>Select a category</option>`
-                for (let i = 0; i < response.data.length; i++) {
-                    options += `<option value="${response.data[i].id}">${response.data[i].name}</option>`
+                for (let i = 0; i < data.data.length; i++) {
+                    options += `<option value="${data.data[i].id}">${data.data[i].name}</option>`
                 }
                 document.getElementById('productCategory').innerHTML = options
             }
-        })
+        } catch (err) {
+            console.error(err.message)
+        }
+    }
+
+    async #_editProduct(productID) {
+        try {
+            const data = await fetchProductById(productID)
+            if (data.success) {
+                const { name, description, productCategoryID, purchasePrice, sellingPrice } = data.data
+                document.getElementById('productName').value = name;
+                document.getElementById('productDescription').value = description;
+                document.getElementById('productCategory').value = productCategoryID
+                document.getElementById('purchasePrice').value = purchasePrice
+                document.getElementById('sellingPrice').value = sellingPrice
+                this.productID = productID
+                const modal = new bootstrap.Modal(document.getElementById('productModal'));
+                modal.show()
+            }
+        } catch (error) {
+            console.log('Error fetching product: ', error.message);
+        }
+    }
+
+    async #_deleteProduct(productID) {
+        const confirmDelete = await Swal.fire({
+            title: 'Delete Product',
+            text: 'Are you sure you want to delete this product?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (confirmDelete.isConfirmed) {
+            try {
+                const deleteResponse = await deleteProduct(productID);
+                if (deleteResponse.success) {
+                    Swal.fire('Deleted!', 'Product has been deleted.', 'success');
+                    this.#_fetchProducts();
+                } else {
+                    Swal.fire('Error!', 'Failed to delete product.', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting product: ', error.message);
+            }
+        }
     }
 }
 

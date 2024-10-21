@@ -45,6 +45,17 @@ module.exports = {
             { name: 'status', type: 'varchar(50)' },
             { name: 'createdAt', type: 'DATETIME' }
          ]
+      },
+      {
+         name: 'sales',
+         fields: [
+            { name: 'productID', type: 'INTEGER' },
+            { name: 'quantity', type: 'INTEGER' },
+            { name: 'totalPrice', type: 'INTEGER' },
+            { name: 'sellingPriceAtSale', type: 'INTEGER' },
+            { name: 'status', type: 'varchar(50)' },
+            { name: 'createdAt', type: 'DATETIME' }
+         ]
       }
    ]
 }

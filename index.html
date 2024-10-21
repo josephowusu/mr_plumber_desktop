@@ -14,17 +14,18 @@
 </head>
 <body class="g-sidenav-show">
     <div class="title-bar" style="background-color: #0275d8">
-        <div class="title-name">Mr Plumber</div>
+        <div class="title-name">Mr Plumber v.1.0.0</div>
         <div class="controls">
+            <button id="exportButton" class="buttons" style="margin-top: 0px;">Export Database</button>
+            <button id="logout" class="buttons" style="margin-top: 0px;">Logout</button>
             <button id="minimize" class="buttons" style="margin-top: -8px;"><i class="fa-regular fa-window-minimize"></i></button>
             <button id="maximize" class="buttons"><i class="fa-solid fa-maximize"></i></button>
             <button id="close" class="danger"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </div>
     <div id="contentWorkingArea"></div>
-    <img src="./assets/images/logo.png" style="height: 100px; width: 100px; position: absolute; right: 10px; bottom: 10px;" />
+    <img src="./assets/images/logo.png" style="height: 400px; width: 600px; position: absolute; right: 300px; bottom: 150px;opacity: 0.1;" />
     
-    <script src="./renderer.js"></script>
     <script src="./component/Header.js"></script>
     <script src="./component/Footer.js"></script>
     <script src="./component/SideBar.js"></script>
@@ -34,19 +35,23 @@
     <script src="./pages/Stock.js"></script>
     <script src="./pages/Customer.js"></script>
     <script src="./pages/Product.js"></script>
+    <script src="./pages/Sales.js"></script>
     <script src="assets/js/core/popper.min.js"></script>
     <script src="assets/js/core/bootstrap.min.js"></script>
     <script src="assets/js/plugins/perfect-scrollbar.min.js"></script>
     <script src="assets/js/plugins/smooth-scrollbar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script>
-        var win = navigator.platform.indexOf('Win') > -1;
-        if (win && document.querySelector('#sidenav-scrollbar')) {
-          var options = {
-            damping: '0.5'
+      var win = navigator.platform.indexOf('Win') > -1;
+      if (win && document.querySelector('#sidenav-scrollbar')) {
+        var options = {
+          damping: '0.5'
           }
           Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
         }
-      </script>
-      <script src="assets/js/soft-ui-dashboard.min.js?v=1.0.7"></script>
+    </script>
+    <script src="assets/js/soft-ui-dashboard.min.js?v=1.0.7"></script>
+    <script src="./renderer.js"></script>
 </body>
 </html>
