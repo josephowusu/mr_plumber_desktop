@@ -1,9 +1,16 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const path = require('node:path');
 const { tables } = require('./../model/tables')
-const dbPath = path.join(__dirname, './../mr_plumber_shop.sqlite');
+const fs = require('node:fs')
 
 let db
+const dbDirectory = 'C:\\database';
+
+if (!fs.existsSync(dbDirectory)) {
+    fs.mkdirSync(dbDirectory, { recursive: true })
+}
+
+const dbPath = path.join(dbDirectory, 'mr_plumber_shop.sqlite')
 
 module.exports = {
     initDatabase: () => {

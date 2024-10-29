@@ -3,6 +3,7 @@ class SalesComponent extends HTMLElement {
         super();
         this.saleID = null;
         this.selectedProductPrice = 0
+        this.selectedProductQuantity = 0
         this.#__init__();
     }
 
@@ -73,7 +74,7 @@ class SalesComponent extends HTMLElement {
                                     <div class="col-12 mb-3">
                                         <label class="form-label" style="font-size: 10pt">Total Price</label>
                                         <h2 id="totalPrice">0.00</h2>
-                                        <!-- <input type="number" id="totalPrice" class="form-control p-3" placeholder="Enter total price"> -->
+                                        
                                     </div>
                                 </div>
                             </form>
@@ -115,6 +116,10 @@ class SalesComponent extends HTMLElement {
                 const productID = document.getElementById('productID').value
                 const quantity = document.getElementById('quantity').value
                 const totalPrice = document.getElementById('totalPrice').innerHTML
+                if (this.selectedProductQuantity < quantity) {
+                    Swal.fire('Sales!', 'Product is out of stock', 'error')
+                    return
+                }
                 if (productID && quantity) {
                     try {
                         let result = await saveSale({ productID, quantity, totalPrice: totalPrice, sellingPriceAtSale: this.selectedProductPrice, saleID: this.saleID });
@@ -137,8 +142,9 @@ class SalesComponent extends HTMLElement {
         if (productSelect) {
             productSelect.addEventListener('change', async (e) => {
                 const selectedProduct = e.target.value;
-                const productPrice = await fetchProductById(selectedProduct);
-                this.selectedProductPrice = Number(productPrice.data.sellingPrice);
+                const productPrice = await fetchProductById(selectedProduct)
+                this.selectedProductPrice = Number(productPrice.data.sellingPrice)
+                this.selectedProductQuantity = Number(productPrice.data.quantity)
                 this.#_calculateTotalPrice();
             })
         }
@@ -169,8 +175,12 @@ class SalesComponent extends HTMLElement {
 
     async #_calculateTotalPrice() {
         const quantity = document.getElementById('quantity').value
-        const totalPrice = this.selectedProductPrice * Number(quantity)
-        document.getElementById('totalPrice').innerHTML = totalPrice.toFixed(2)
+        if (this.selectedProductQuantity > quantity) {
+            const totalPrice = this.selectedProductPrice * Number(quantity)
+            document.getElementById('totalPrice').innerHTML = totalPrice.toFixed(2)
+        } else {
+            Swal.fire('Sales!', 'Product is out of stock', 'error')
+        }
     }
     
 
@@ -215,7 +225,6 @@ class SalesComponent extends HTMLElement {
         }
     }
 
-
     async #_editSale(saleID) {
         try {
             const salesData = await fetchSaleById(saleID);
@@ -252,10 +261,10 @@ class SalesComponent extends HTMLElement {
             if (confirmation.isConfirmed) {
                 const result = await deleteSale(saleID)
                 if (result.success) {
-                    Swal.fire('Deleted!', 'Product stock has been deleted.', 'success');
+                    Swal.fire('Deleted!', 'Product sale has been deleted.', 'success');
                     this.#_fetchSales()
                 } else {
-                    Swal.fire('Error!', 'Failed to delete product stock.', 'error');
+                    Swal.fire('Error!', 'Failed to delete product sale.', 'error');
                 }
             }
         } catch (err) {

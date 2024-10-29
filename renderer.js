@@ -234,7 +234,7 @@ const saveProductCategory = (data) => {
             });
         }
     });
-};
+}
 
 const fetchProductCategories = () => {
     return new Promise((resolve, reject) => {
