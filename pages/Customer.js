@@ -31,7 +31,7 @@ class CustomerComponent extends HTMLElement {
                         </div>
                     </div>
                 </nav>
-                <div class="container-fluid py-4">
+                <div class="container-fluid py-4 scrollable-container">
                     <div class="row">
                         <div class="col-12">
                             <div class="card mb-4">

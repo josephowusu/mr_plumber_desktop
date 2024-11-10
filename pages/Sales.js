@@ -1,14 +1,15 @@
 class SalesComponent extends HTMLElement {
     constructor() {
-        super();
-        this.saleID = null;
+        super()
+        this.saleID = null
         this.selectedProductPrice = 0
         this.selectedProductQuantity = 0
-        this.#__init__();
+        this.saleItems = []
+        this.#__init__()
     }
 
     #__init__() {
-        const template = document.createElement('template');
+        const template = document.createElement('template')
         template.innerHTML = String.raw`
             <sidebar-component></sidebar-component>
             <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg" style="margin-left: 17.125rem;">
@@ -28,7 +29,7 @@ class SalesComponent extends HTMLElement {
                         </div>
                     </div>
                 </nav>
-                <div class="container-fluid py-4">
+                <div class="container-fluid py-4 scrollable-container">
                     <div class="row">
                         <div class="col-12">
                             <div class="card mb-4">
@@ -63,19 +64,47 @@ class SalesComponent extends HTMLElement {
                             <form class="modal-body" id="modalSalesForm">
                                 <div class="row">
                                     <div class="col-12 mb-3">
+                                        <label class="form-label" style="font-size: 10pt">Select Customer</label>
+                                        <select id="customerSelect" class="form-select p-3">
+										</select>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label" style="font-size: 10pt">Product Category</label>
+                                        <select id="productCategoryID" class="form-select p-3">
+										</select>
+                                    </div>
+                                    <div class="col-12 mb-3">
                                         <label class="form-label" style="font-size: 10pt">Product</label>
                                         <select id="productID" class="form-select p-3">
 										</select>
                                     </div>
                                     <div class="col-12 mb-3">
                                         <label class="form-label" style="font-size: 10pt">Quantity</label>
-                                        <input type="number" id="quantity" class="form-control p-3" placeholder="Enter quantity">
+                                        <input type="number" step="0.01" id="quantity" class="form-control p-3" placeholder="Enter quantity">
                                     </div>
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label" style="font-size: 10pt">Total Price</label>
-                                        <h2 id="totalPrice">0.00</h2>
-                                        
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6 class="font-weight-bolder mb-3">Sales List</h6>
+                                        <table class="table align-items-center">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product</th>
+                                                    <th>Quantity</th>
+                                                    <th>Total</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="salesItemsTableBody"></tbody>
+                                        </table>
                                     </div>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <button type="button" class="btn btn-primary w-100" id="addItemButton">Add Item</button>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label" style="font-size: 10pt">Total Price</label>
+                                    <h2 id="totalPrice">0.00</h2>
                                 </div>
                             </form>
                             <div class="modal-footer">
@@ -94,21 +123,47 @@ class SalesComponent extends HTMLElement {
         this.#_addEvents()
         this.#_fetchProduct()
         this.#_fetchSales()
+        this.#_fetchCustomers()
+        this.#_fetchProductCategory()
+        // fetchProductByProductCategory
+        const productCategoryID = document.getElementById('productCategoryID')
+        if (productCategoryID) {
+            productCategoryID.addEventListener('change', async (e) => {
+                e.preventDefault()
+                let id = e.target.value
+                try {
+                    let data = await fetchProductByProductCategory(id)
+                    if (data.success) {
+                        let options = `<option value="" disabled selected>Select a product</option>`
+                        for (let i = 0; i < data.data.length; i++) {
+                            let product = data.data[i]
+                            options += String.raw`<option value="${product.id}" productname="${product.name}" productprice="${product.sellingPrice}">
+                                ${product.name} - ${product.productCategoryName} (${product.quantity})
+                            </option>`
+                        }
+                        document.getElementById('productID').innerHTML = options
+                    }
+                }  catch (err) {
+                    console.error(err.message)
+                }
+            })
+        }
     }
 
     #_addEvents() {
-        const addSaleButton = document.querySelector('#addSaleButton');
+        const addSaleButton = document.querySelector('#addSaleButton')
+        const addItemButton = this.querySelector('#addItemButton')
+
         if (addSaleButton) {
             addSaleButton.addEventListener('click', () => {
                 const modalForm = document.getElementById('modalSalesForm');
                 if (modalForm) modalForm.reset();
                 this.saleID = null;
                 const modal = new bootstrap.Modal(document.getElementById('salesModal'));
-                modal.show();
-            });
+                modal.show()
+            })
         }
         
-
         const saveSaleButton = document.getElementById('saveSaleButton')
         if (saveSaleButton) {
             saveSaleButton.addEventListener('click', async (e) => {
@@ -149,7 +204,6 @@ class SalesComponent extends HTMLElement {
             })
         }
 
-
         const quantityInput = document.getElementById('quantity')
         if (quantityInput) {
             quantityInput.addEventListener('input', () => {
@@ -164,23 +218,82 @@ class SalesComponent extends HTMLElement {
                 const salesID = target.getAttribute('data-id');
                 const action = target.getAttribute('data-action');
                 if (action === 'edit') {
-                    this.#_editSale(salesID);
+                    this.#_editSale(salesID)
                 } else if (action === 'delete') {
-                    this.#_deleteSale(salesID);
+                    this.#_deleteSale(salesID)
                 }
-            });
+            })
         }
+
+        addItemButton.addEventListener('click', () => {
+            const productSelect = this.querySelector('#productID')
+            const quantityInput = this.querySelector('#quantity')
+            const selectedOption = productSelect.options[productSelect.selectedIndex]
+            const productname = selectedOption ? selectedOption.getAttribute('productname') : '';
+            const productprice = selectedOption ? selectedOption.getAttribute('productprice') : 0;
+            const product = productSelect.value
+            const quantity = parseInt(quantityInput.value)
+            if (product && quantity && productname && productprice) {
+                this.saleItems.push({ product, quantity, productname, productprice })
+                this.#_renderSalesItems()
+                this.#_resetItemInputs()
+                this.#_calculateTotalPrice2()
+            } else {
+                Swal.fire('Error', 'Please select a product and enter a quantity.', 'error');
+            }
+        })
+    }
+
+    #_resetItemInputs() {
+        this.querySelector('#productID').value = '';
+        this.querySelector('#quantity').value = '';
+    }
+
+    #_renderSalesItems() {
+        const salesItemsTableBody = this.querySelector('#salesItemsTableBody')
+        salesItemsTableBody.innerHTML = ''
+        this.saleItems.forEach((item, index) => {
+            const row = document.createElement('tr')
+            row.innerHTML = `
+                <td>${item.productname}</td>
+                <td>${item.quantity}</td>
+                <td>${Number(item.quantity) * Number(item.productprice || 0)}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" data-index="${index}">Remove</button>
+                </td>
+            `
+            salesItemsTableBody.appendChild(row)
+        })
+
+        const removeButtons = salesItemsTableBody.querySelectorAll('button')
+        removeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const index = button.getAttribute('data-index')
+                this.saleItems.splice(index, 1)
+                this.#_renderSalesItems()
+                this.#_calculateTotalPrice2()
+            })
+        })
     }
 
 
     async #_calculateTotalPrice() {
         const quantity = document.getElementById('quantity').value
-        if (this.selectedProductQuantity > quantity) {
-            const totalPrice = this.selectedProductPrice * Number(quantity)
-            document.getElementById('totalPrice').innerHTML = totalPrice.toFixed(2)
+        if (this.selectedProductQuantity >= quantity) {
+            // const totalPrice = this.selectedProductPrice * Number(quantity)
+            // document.getElementById('totalPrice').innerHTML = totalPrice.toFixed(2)
         } else {
             Swal.fire('Sales!', 'Product is out of stock', 'error')
         }
+    }
+
+    async #_calculateTotalPrice2() {
+        let total = 0
+        for (let i = 0; i < this.saleItems.length; i++) {
+            const item = this.saleItems[i]
+            total += Number(item.quantity) * Number(item.productprice || 0)
+        }
+        document.getElementById('totalPrice').innerHTML = total.toFixed(2)
     }
     
 
@@ -210,15 +323,55 @@ class SalesComponent extends HTMLElement {
         }
     }
 
+    // async #_fetchProduct() {
+    //     try {
+    //         let data = await getProducts()
+    //         if (data.success) {
+    //             let options = `<option value="" disabled selected>Select a product</option>`
+    //             for (let i = 0; i < data.data.length; i++) {
+    //                 options += String.raw`<option value="${data.data[i].id}" productname="${data.data[i].name}" productprice="${data.data[i].sellingPrice}">
+    //                     ${data.data[i].name}
+    //                 </option>`
+    //             }
+    //             document.getElementById('productID').innerHTML = options
+    //         }
+    //     }  catch (err) {
+    //         console.error(err.message)
+    //     }
+    // }
+
     async #_fetchProduct() {
         try {
-            let data = await getProducts()
+            let data = await getProducts();
             if (data.success) {
-                let options = `<option value="" disabled selected>Select a product</option>`
+                let options = '<option>Select product</option>';
+                for (let i = 0; i < data.data.length; i++) {
+                    const product = data.data[i]
+                    options += String.raw`
+                        <option value="${product.id}" productname="${product.name}" productprice="${product.sellingPrice}">
+                            ${product.name} - ${product.productCategoryName} (${product.quantity})
+                        </option>
+                    `
+                }
+                const productSelect = this.querySelector(`#productID`)
+                if (productSelect) {
+                    productSelect.innerHTML = options
+                }
+            }
+        } catch (err) {
+            console.error(err.message);
+        }
+    }
+
+    async #_fetchProductCategory() {
+        try {
+            let data = await fetchProductCategories()
+            if (data.success) {
+                let options = `<option value="" disabled selected>Filter by category</option>`
                 for (let i = 0; i < data.data.length; i++) {
                     options += `<option value="${data.data[i].id}">${data.data[i].name}</option>`
                 }
-                document.getElementById('productID').innerHTML = options
+                document.getElementById('productCategoryID').innerHTML = options
             }
         }  catch (err) {
             console.error(err.message)
@@ -244,6 +397,27 @@ class SalesComponent extends HTMLElement {
             }
         } catch (err) {
             console.error(err.message);
+        }
+    }
+
+    async #_fetchCustomers() {
+        try {
+            let data = await fetchCustomers();
+            if (data.success) {
+                let options = '<option>Select customer</option>';
+                for (let i = 0; i < data.data.length; i++) {
+                    const customer = data.data[i];
+                    options += String.raw`
+                        <option value="${customer.id}">${customer.name} (${customer.email || '~'}, ${customer.phone || '~'})</option>
+                    `;
+                }
+                const customerSelect = this.querySelector(`#customerSelect`);
+                if (customerSelect) {
+                    customerSelect.innerHTML = options
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching customers: ', error.message);
         }
     }
     

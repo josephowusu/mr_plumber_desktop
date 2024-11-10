@@ -5,7 +5,6 @@ const sqlite3 = require('sqlite3').verbose()
 const dbController = require('./controller/dbController')
 const fs = require('node:fs')
 
-
 const dbDirectory = 'C:\\database';
 
 if (!fs.existsSync(dbDirectory)) {
@@ -123,12 +122,10 @@ const createWindow = () => {
     
         fs.copyFile(source, destination, (err) => {
             if (err) {
-                console.error('Error exporting database:', err);
-                // Send an IPC message to the renderer process for error
+                console.error('Error exporting database:', err)
                 mainWindow.webContents.send('export-error', err.message);
             } else {
-                console.log('Database exported successfully to:', destination);
-                // Send an IPC message to the renderer process for success
+                console.log('Database exported successfully to:', destination)
                 mainWindow.webContents.send('export-success');
             }
         });
@@ -136,6 +133,8 @@ const createWindow = () => {
 
     //   mainWindow.webContents.openDevTools()
 }
+
+app.disableHardwareAcceleration()
 
 app.whenReady().then(() => {
     createWindow()

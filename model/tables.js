@@ -16,13 +16,13 @@ module.exports = {
          fields: [
             { name: 'image', type: 'TEXT' },
             { name: 'name', type: 'TEXT' },
-            { name: 'quantity', type: 'INTEGER' },
+            { name: 'quantity', type: 'REAL' },
             { name: 'description', type: 'TEXT' },
-            { name: 'productCategoryID', type: 'BITGINT(100)' },
+            { name: 'productCategoryID', type: 'INTEGER' },
             { name: 'dateMan', type: 'TEXT' },
             { name: 'dateExp', type: 'TEXT' },
-            { name: 'purchasePrice', type: 'INTEGER' },
-            { name: 'sellingPrice', type: 'INTEGER' },
+            { name: 'purchasePrice', type: 'REAL' },
+            { name: 'sellingPrice', type: 'REAL' },
             { name: 'status', type: 'varchar(50)' },
             { name: 'createdAt', type: 'DATETIME' }
          ]
@@ -31,7 +31,10 @@ module.exports = {
          name: 'productStock',
          fields: [
             { name: 'productID', type: 'INTEGER' },
-            { name: 'quantity', type: 'INTEGER' },
+            { name: 'quantity', type: 'REAL' },
+            { name: 'purchasePrice', type: 'REAL' },
+            { name: 'sellingPrice', type: 'REAL' },
+            { name: 'supplier', type: 'TEXT' },
             { name: 'status', type: 'varchar(50)' },
             { name: 'createdAt', type: 'DATETIME' }
          ]
@@ -49,10 +52,17 @@ module.exports = {
       {
          name: 'sales',
          fields: [
-            { name: 'productID', type: 'INTEGER' },
-            { name: 'quantity', type: 'INTEGER' },
-            { name: 'totalPrice', type: 'INTEGER' },
-            { name: 'sellingPriceAtSale', type: 'INTEGER' },
+            { name: 'customerID', type: 'INTEGER' },
+            { name: 'items', type: 'TEXT' },
+            { name: 'status', type: 'varchar(50)' },
+            { name: 'createdAt', type: 'DATETIME' }
+         ]
+      },
+      {
+         name: 'invoices',
+         fields: [
+            { name: 'customerID', type: 'INTEGER' },
+            { name: 'items', type: 'TEXT'},
             { name: 'status', type: 'varchar(50)' },
             { name: 'createdAt', type: 'DATETIME' }
          ]

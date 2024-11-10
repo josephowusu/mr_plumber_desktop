@@ -9,7 +9,7 @@ class DashboardComponent extends HTMLElement {
         const template = document.createElement('template')
         template.innerHTML = (String.raw`
             <sidebar-component></sidebar-component>
-            <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg" style="margin-left: 17.125rem;">
+            <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg scrollable-container" style="margin-left: 17.125rem;height: 85vh!important">
                <div class="container-fluid py-4">
                     <div class="row">
                         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
@@ -182,8 +182,20 @@ class DashboardComponent extends HTMLElement {
                         </div>
                     </div>
                     <div class="mt-5" style="height: 500px; width: 100%">
-                        <canvas id="profitLossChart" width="500" height="200"></canvas>
+                        <canvas id="profitLossChart" width="1000" height="400"></canvas>
                     </div>
+                    <table id="profitLossTable" class="table table-striped table-bordered mt-4">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Profit</th>
+                                <th>Loss</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                        </tbody>
+                    </table>
                 </div>
             </main>
         `)
@@ -200,6 +212,50 @@ class DashboardComponent extends HTMLElement {
         // Add additional event listeners here
     }
 
+    // async #_fetchSalesData() {
+    //     try {
+    //         // Fetch all sales
+    //         const salesResult = await fetchSales(); // Adjust this to your actual sales fetch function
+    //         if (!salesResult.success) {
+    //             throw new Error('Failed to fetch sales data');
+    //         }
+    
+    //         const productsData = await getProducts();
+    //         const productsMap = {}; // Create a map for quick access to product data
+    
+    //         for (let i = 0; i < productsData.data.length; i++) {
+    //             const product = productsData.data[i];
+    //             productsMap[product.id] = product;
+    //         }
+    //         const profitLossData = {}
+
+    //         for (let j = 0; j < salesResult.data.length; j++) {
+    //             const sale = salesResult.data[j];
+    //             const product = productsMap[sale.productID];
+    
+    //             if (product) {
+    //                 const month = new Date(sale.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
+    //                 const total = product.purchasePrice * sale.quantity;
+    
+    //                 if (!profitLossData[month]) {
+    //                     profitLossData[month] = { profit: 0, loss: 0 };
+    //                 }
+    
+    //                 if (sale.totalPrice > total) {
+    //                     profitLossData[month].profit += Number(sale.totalPrice - total);
+    //                 } else {
+    //                     profitLossData[month].loss += Number(total - sale.totalPrice);
+    //                 }
+    //             }
+    //         }
+    
+    //         return profitLossData; // Return the structured profitLossData
+    //     } catch (error) {
+    //         console.error('Error fetching sales data: ', error.message);
+    //         return {}; // Return an empty object in case of error
+    //     }
+    // }
+
     async #_fetchSalesData() {
         try {
             // Fetch all sales
@@ -215,24 +271,25 @@ class DashboardComponent extends HTMLElement {
                 const product = productsData.data[i];
                 productsMap[product.id] = product;
             }
-            const profitLossData = {}
-
+            
+            const profitLossData = {};
+    
             for (let j = 0; j < salesResult.data.length; j++) {
                 const sale = salesResult.data[j];
                 const product = productsMap[sale.productID];
     
                 if (product) {
-                    const month = new Date(sale.createdAt).toLocaleString('default', { month: 'long', year: 'numeric' });
+                    const date = new Date(sale.createdAt).toISOString().split('T')[0]; // Get the date in YYYY-MM-DD format
                     const total = product.purchasePrice * sale.quantity;
     
-                    if (!profitLossData[month]) {
-                        profitLossData[month] = { profit: 0, loss: 0 };
+                    if (!profitLossData[date]) {
+                        profitLossData[date] = { profit: 0, loss: 0 };
                     }
     
                     if (sale.totalPrice > total) {
-                        profitLossData[month].profit += Number(sale.totalPrice - total);
+                        profitLossData[date].profit += Number(sale.totalPrice - total);
                     } else {
-                        profitLossData[month].loss += Number(total - sale.totalPrice);
+                        profitLossData[date].loss += Number(total - sale.totalPrice);
                     }
                 }
             }
@@ -243,6 +300,7 @@ class DashboardComponent extends HTMLElement {
             return {}; // Return an empty object in case of error
         }
     }
+    
     
 
     async #_loadDashboardData() {
@@ -320,7 +378,7 @@ class DashboardComponent extends HTMLElement {
         const labels = Object.keys(profitLossData); // Months
         const profits = labels.map(month => profitLossData[month].profit);
         const losses = labels.map(month => profitLossData[month].loss);
-
+    
         // Create the line chart
         const ctx = document.getElementById('profitLossChart').getContext('2d');
         const profitLossChart = new Chart(ctx, {
@@ -331,14 +389,14 @@ class DashboardComponent extends HTMLElement {
                     {
                         label: 'Profit',
                         data: profits,
-                        borderColor: 'green',
+                        borderColor: '#5cb85c',
                         fill: false,
                         tension: 0.1,
                     },
                     {
                         label: 'Loss',
                         data: losses,
-                        borderColor: 'red',
+                        borderColor: '#d9534f',
                         fill: false,
                         tension: 0.1,
                     }
@@ -349,10 +407,53 @@ class DashboardComponent extends HTMLElement {
                     y: {
                         beginAtZero: true,
                     }
-                }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index', // This shows the tooltip for all datasets at the hovered index
+                        intersect: false, // Tooltips will show on hover without needing to be directly over a point
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                const label = tooltipItem.dataset.label || '';
+                                const value = tooltipItem.raw || 0;
+                                return `${label}: GHC ${value.toFixed(2)}`; // Format the tooltip
+                            }
+                        }
+                    },
+                },
             }
         });
+        this.#_populateProfitLossTable(profitLossData)
     }
+
+    #_populateProfitLossTable(profitLossData) {
+        const tableBody = document.querySelector('#profitLossTable tbody');
+        tableBody.innerHTML = ''; // Clear previous data
+    
+        // Populate the table rows
+        for (const date in profitLossData) {
+            const row = document.createElement('tr');
+    
+            const dateCell = document.createElement('td');
+            dateCell.textContent = date; // Date in format 'MM/DD/YYYY'
+            row.appendChild(dateCell);
+    
+            const profitCell = document.createElement('td');
+            profitCell.textContent = `$${profitLossData[date].profit.toFixed(2)}`;
+            row.appendChild(profitCell);
+    
+            const lossCell = document.createElement('td');
+            lossCell.textContent = `$${profitLossData[date].loss.toFixed(2)}`;
+            row.appendChild(lossCell);
+    
+            tableBody.appendChild(row);
+        }
+    }
+    
 
     disconnectedCallback() {
         // Clean up, if needed

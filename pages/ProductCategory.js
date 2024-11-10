@@ -30,7 +30,7 @@ class ProductCategoryComponent extends HTMLElement {
                         </div>
                     </div>
                 </nav>
-                <div class="container-fluid py-4">
+                <div class="container-fluid py-4 scrollable-container">
                     <div class="row">
                         <div class="col-12">
                             <div class="card mb-4">
@@ -64,7 +64,7 @@ class ProductCategoryComponent extends HTMLElement {
                             <form class="modal-body" id="modalproductCategoryForm">
                                 <div class="row">
                                     <div class="col-12 mb-3">
-                                        <label for="categoryName" class="form-label" style="font-size: 10pt">Category Name</label>
+                                        <label for="categoryName" class="form-label" style="font-size: 10pt">Category Name *</label>
                                         <input type="text" id="categoryName" class="form-control p-3" placeholder="Enter category name">
                                     </div>
                                     <div class="col-12 mb-3">
@@ -90,8 +90,8 @@ class ProductCategoryComponent extends HTMLElement {
     }
 
     connectedCallback() {
-        this.#_addEvents();
-        this.#_fetchCategory();
+        this.#_addEvents()
+        this.#_fetchCategory()
     }
 
     #_addEvents() {
@@ -101,7 +101,7 @@ class ProductCategoryComponent extends HTMLElement {
                 e.preventDefault();
                 const modalForm = document.getElementById('modalproductCategoryForm');
                 if (modalForm) modalForm.reset();
-                this.productCategoryID = null; // Reset category ID for new entry
+                this.productCategoryID = null
                 const modal = new bootstrap.Modal(document.getElementById('productCategoryModal'));
                 modal.show();
             });
@@ -134,25 +134,25 @@ class ProductCategoryComponent extends HTMLElement {
                             });
                         }
                     } catch (err) {
-                        console.error(err.message);
+                        console.error(err.message)
                     }
                 }
-            });
+            })
         }
 
-        const tableBody = document.querySelector(`#tableBodyProductCategory`);
+        const tableBody = document.querySelector(`#tableBodyProductCategory`)
         if (tableBody) {
             tableBody.addEventListener('click', (e) => {
                 const target = e.target;
-                const categoryId = target.getAttribute('data-id');
-                const action = target.getAttribute('data-action');
+                const categoryId = target.getAttribute('data-id')
+                const action = target.getAttribute('data-action')
 
                 if (action === 'edit') {
-                    this.#_editCategory(categoryId);
+                    this.#_editCategory(categoryId)
                 } else if (action === 'delete') {
-                    this.#_deleteCategory(categoryId);
+                    this.#_deleteCategory(categoryId)
                 }
-            });
+            })
         }
     }
 
@@ -174,7 +174,7 @@ class ProductCategoryComponent extends HTMLElement {
                                 <button class="btn btn-danger btn-sm" style="font-family: monRegular !important; font-size: 8pt" data-id="${category.id}" data-action="delete">Delete</button>
                             </td>
                         </tr>
-                    `;
+                    `
                 }
                 const tableBody = document.querySelector(`#tableBodyProductCategory`);
                 if (tableBody) tableBody.innerHTML = '';
