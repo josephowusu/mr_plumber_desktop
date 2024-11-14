@@ -38,10 +38,8 @@ class SalesComponent extends HTMLElement {
                                         <table class="table align-items-center mb-0">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Product Name</th>
-                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Selling Price</th>
-                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7 ps-2" style="font-family: monRegular !important; font-size: 8pt">Quantity</th>
-                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7 ps-2" style="font-family: monRegular !important; font-size: 8pt">Total Price</th>
+                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Customer Name</th>
+                                                    <th class="text-uppercase text-secondary font-weight-bolder opacity-7" style="font-family: monRegular !important; font-size: 8pt">Products</th>
                                                     <th class="text-uppercase text-secondary font-weight-bolder opacity-7 ps-2" style="font-family: monRegular !important; font-size: 8pt">Date</th>
                                                     <th class="text-secondary opacity-7"></th>
                                                 </tr>
@@ -168,27 +166,30 @@ class SalesComponent extends HTMLElement {
         if (saveSaleButton) {
             saveSaleButton.addEventListener('click', async (e) => {
                 e.preventDefault()
-                const productID = document.getElementById('productID').value
-                const quantity = document.getElementById('quantity').value
-                const totalPrice = document.getElementById('totalPrice').innerHTML
-                if (this.selectedProductQuantity < quantity) {
-                    Swal.fire('Sales!', 'Product is out of stock', 'error')
+                const customerID = document.getElementById('customerSelect').value
+                const totalPrice = parseFloat(document.getElementById('totalPrice').innerText)
+                if (!customerID || this.saleItems.length === 0) {
+                    Swal.fire('Sales', 'Please select a customer and add at least one item', 'error');
                     return
                 }
-                if (productID && quantity) {
-                    try {
-                        let result = await saveSale({ productID, quantity, totalPrice: totalPrice, sellingPriceAtSale: this.selectedProductPrice, saleID: this.saleID });
-                        if (result.success) {
-                            Swal.fire('Sales', 'Sale saved successfully', 'success')
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('salesModal'))
-                            modal.hide()
-                            this.#_fetchSales()
-                        } else {
-                            Swal.fire('Sales', 'Error saving sale', 'error')
-                        }
-                    } catch (err) {
-                        console.error(err.message)
+                try {
+                    let result = await saveSale({
+                        customerID, items: JSON.stringify(this.saleItems),
+                        totalPrice: totalPrice, status: 'completed',
+                        saleID: this.saleID
+                    })
+                    if (result.success) {
+                        Swal.fire('Sales', 'Sale saved successfully', 'success')
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('salesModal'))
+                        modal.hide()
+                        this.#_fetchSales()
+                        this.saleID == null
+                    } else {
+                        Swal.fire('Sales', 'Error saving sale', 'error')
                     }
+                } catch (err) {
+                    console.error(err.message)
+                    Swal.fire('Sales', err.message, 'error')
                 }
             })
         }
@@ -232,7 +233,7 @@ class SalesComponent extends HTMLElement {
             const productname = selectedOption ? selectedOption.getAttribute('productname') : '';
             const productprice = selectedOption ? selectedOption.getAttribute('productprice') : 0;
             const product = productSelect.value
-            const quantity = parseInt(quantityInput.value)
+            const quantity = parseFloat(quantityInput.value)
             if (product && quantity && productname && productprice) {
                 this.saleItems.push({ product, quantity, productname, productprice })
                 this.#_renderSalesItems()
@@ -247,6 +248,7 @@ class SalesComponent extends HTMLElement {
     #_resetItemInputs() {
         this.querySelector('#productID').value = '';
         this.querySelector('#quantity').value = '';
+        this.saleItems = []
     }
 
     #_renderSalesItems() {
@@ -303,16 +305,15 @@ class SalesComponent extends HTMLElement {
             if (data.success) {
                 let html = ''
                 data.data.forEach(sale => {
+                    const items = sale.items && Array.isArray(sale.items) ? sale.items : JSON.parse(sale.items)
                     html += String.raw`
                         <tr>
-                            <td>${sale.name}</td>
-                            <td>${sale.sellingPriceAtSale}</td>
-                            <td>${sale.saleQuantity}</td>
-                            <td>${sale.totalPrice}</td>
-                            <td>${new Date(sale.createdAt).toLocaleDateString()}</td>
+                            <td style="font-family: monRegular">${sale.name ? sale.name : 'No name'}</td>
+                            <td style="font-family: monRegular">${Array.isArray(items) ? this.#_renderItems(items) : ''}</td>
+                            <td style="font-family: monRegular">${new Date(sale.createdAt).toLocaleDateString()}</td>
                             <td class="text-end">
-                                <button class="btn btn-secondary btn-sm" data-id="${sale.id}" data-action="edit">Edit</button>
-                                <button class="btn btn-danger btn-sm" data-id="${sale.id}" data-action="delete">Delete</button>
+                                <button style="font-family: monRegular" class="btn btn-secondary btn-sm" data-id="${sale.id}" data-action="edit">Edit</button>
+                                <button style="font-family: monRegular" class="btn btn-danger btn-sm" data-id="${sale.id}" data-action="delete">Delete</button>
                             </td>
                         </tr>`
                 })
@@ -323,22 +324,30 @@ class SalesComponent extends HTMLElement {
         }
     }
 
-    // async #_fetchProduct() {
-    //     try {
-    //         let data = await getProducts()
-    //         if (data.success) {
-    //             let options = `<option value="" disabled selected>Select a product</option>`
-    //             for (let i = 0; i < data.data.length; i++) {
-    //                 options += String.raw`<option value="${data.data[i].id}" productname="${data.data[i].name}" productprice="${data.data[i].sellingPrice}">
-    //                     ${data.data[i].name}
-    //                 </option>`
-    //             }
-    //             document.getElementById('productID').innerHTML = options
-    //         }
-    //     }  catch (err) {
-    //         console.error(err.message)
-    //     }
-    // }
+    #_renderItems(items) {
+        let html = '<ol>';
+        let totalAmount = 0
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            let total = Number(item.productprice) * Number(item.quantity);
+            totalAmount += total;
+            html += String.raw`
+                <li style="font-family: monRegular">
+                    ${item.productname} - Quantity: (${item.quantity}) = 
+                    <span style="font-family: monBold">Total: ${formatCurrency(total)}</span>
+                </li>
+            `
+        }
+        const vatAmount = totalAmount * 0.15;
+        const finalAmount = totalAmount + vatAmount;
+        html += '</ol>';
+        html += String.raw`
+            <h6 style="font-family: monRegular">TOTAL AMOUNT: ${formatCurrency(totalAmount)}</h6>
+            <h6 style="font-family: monRegular">VAT (15%): ${formatCurrency(vatAmount)}</h6>
+            <h6 style="font-family: monRegular">FINAL AMOUNT: ${formatCurrency(finalAmount)}</h6>
+        `
+        return html
+    }
 
     async #_fetchProduct() {
         try {

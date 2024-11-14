@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 })
 
+
+
 document.getElementById('minimize').addEventListener('click', () => {
     ipcRenderer.send('minimize-window')
 })
@@ -619,10 +621,9 @@ const fetchSaleById = (saleID) => {
 
 const fetchSales = () => {
     return new Promise((resolve, reject) => {
-        const query = `SELECT productCategory.*, products.*, productCategory.name AS productCategoryName, sales.quantity AS saleQuantity, sales.* 
+        const query = `SELECT customers.*, sales.* 
                        FROM sales 
-                       LEFT JOIN products ON products.id = sales.productID
-                       LEFT JOIN productCategory ON productCategory.id = products.productCategoryID
+                       LEFT JOIN customers ON customers.id = sales.customerID
                        ORDER BY sales.id DESC`
         database.all(query, [], (err, rows) => {
             if (err) {
@@ -636,62 +637,151 @@ const fetchSales = () => {
     });
 };
 
+// const saveSale = (data) => {
+//     return new Promise((resolve, reject) => {
+//         if (data.saleID) {
+//             const fetchSaleQuery = `SELECT productID, quantity, sellingPriceAtSale FROM sales WHERE id = ?`;
+//             database.get(fetchSaleQuery, [data.saleID], (err, sale) => {
+//                 if (err) {
+//                     console.log('Error fetching sale: ', err.message)
+//                     reject({ success: false, error: err.message })
+//                 } else if (sale) {
+//                     const oldQuantity = sale.quantity
+//                     const productID = sale.productID
+//                     const updateProductQuery = `UPDATE products SET quantity = quantity + ? - ? WHERE id = ?`;
+//                     database.run(updateProductQuery, [oldQuantity, data.quantity, productID], function (err) {
+//                         if (err) {
+//                             console.log('Error updating product quantity: ', err.message);
+//                             reject({ success: false, error: err.message });
+//                         } else {
+//                             const updateSaleQuery = `UPDATE sales SET quantity = ?, totalPrice = ?, sellingPriceAtSale = ? WHERE id = ?`;
+//                             database.run(updateSaleQuery, [data.quantity, data.totalPrice, data.sellingPriceAtSale, data.saleID], function (err) {
+//                                 if (err) {
+//                                     console.log('Error updating sale: ', err.message);
+//                                     reject({ success: false, error: err.message });
+//                                 } else {
+//                                     console.log('Sale updated successfully!');
+//                                     resolve({ success: true });
+//                                 }
+//                             });
+//                         }
+//                     });
+//                 }
+//             });
+//         } else {
+//             // No saleID means this is a new sale, so we insert it
+//             const insertSaleQuery = `INSERT INTO sales (productID, quantity, totalPrice, sellingPriceAtSale, createdAt) 
+//                                      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`;
+//             database.run(insertSaleQuery, [data.productID, data.quantity, data.totalPrice, data.sellingPriceAtSale], function (err) {
+//                 if (err) {
+//                     console.log('Error inserting sale: ', err.message);
+//                     reject({ success: false, error: err.message });
+//                 } else {
+//                     // Update product quantity by subtracting the sale quantity
+//                     const updateProductQuery = `UPDATE products SET quantity = quantity - ? WHERE id = ?`;
+//                     database.run(updateProductQuery, [data.quantity, data.productID], function (err) {
+//                         if (err) {
+//                             console.log('Error updating product quantity: ', err.message);
+//                             reject({ success: false, error: err.message });
+//                         } else {
+//                             console.log('Sale and product quantity updated successfully!');
+//                             resolve({ success: true, lastID: this.lastID });
+//                         }
+//                     });
+//                 }
+//             });
+//         }
+//     });
+// }
+
 const saveSale = (data) => {
     return new Promise((resolve, reject) => {
         if (data.saleID) {
-            const fetchSaleQuery = `SELECT productID, quantity, sellingPriceAtSale FROM sales WHERE id = ?`;
+            const fetchSaleQuery = `SELECT items FROM sales WHERE id = ?`;
             database.get(fetchSaleQuery, [data.saleID], (err, sale) => {
                 if (err) {
-                    console.log('Error fetching sale: ', err.message)
-                    reject({ success: false, error: err.message })
-                } else if (sale) {
-                    const oldQuantity = sale.quantity
-                    const productID = sale.productID
-                    const updateProductQuery = `UPDATE products SET quantity = quantity + ? - ? WHERE id = ?`;
-                    database.run(updateProductQuery, [oldQuantity, data.quantity, productID], function (err) {
-                        if (err) {
-                            console.log('Error updating product quantity: ', err.message);
-                            reject({ success: false, error: err.message });
-                        } else {
-                            const updateSaleQuery = `UPDATE sales SET quantity = ?, totalPrice = ?, sellingPriceAtSale = ? WHERE id = ?`;
-                            database.run(updateSaleQuery, [data.quantity, data.totalPrice, data.sellingPriceAtSale, data.saleID], function (err) {
-                                if (err) {
-                                    console.log('Error updating sale: ', err.message);
-                                    reject({ success: false, error: err.message });
-                                } else {
-                                    console.log('Sale updated successfully!');
-                                    resolve({ success: true });
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        } else {
-            // No saleID means this is a new sale, so we insert it
-            const insertSaleQuery = `INSERT INTO sales (productID, quantity, totalPrice, sellingPriceAtSale, createdAt) 
-                                     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`;
-            database.run(insertSaleQuery, [data.productID, data.quantity, data.totalPrice, data.sellingPriceAtSale], function (err) {
-                if (err) {
-                    console.log('Error inserting sale: ', err.message);
+                    console.log('Error fetching sale:', err.message);
                     reject({ success: false, error: err.message });
-                } else {
-                    // Update product quantity by subtracting the sale quantity
-                    const updateProductQuery = `UPDATE products SET quantity = quantity - ? WHERE id = ?`;
-                    database.run(updateProductQuery, [data.quantity, data.productID], function (err) {
+                } else if (sale) {
+                    const oldItems = JSON.parse(sale.items);
+                    const newItems = data.items
+                    const revertQuantities = oldItems.map(item => {
+                        return new Promise((resolve, reject) => {
+                            const updateProductQuery = `UPDATE products SET quantity = quantity + ? WHERE id = ?`;
+                            database.run(updateProductQuery, [item.quantity, item.productID], function (err) {
+                                if (err) reject(err);
+                                else resolve();
+                            });
+                        });
+                    });
+
+                    Promise.all(revertQuantities)
+                        .then(() => {
+                            const updateQuantities = newItems.map(item => {
+                                return new Promise((resolve, reject) => {
+                                    const updateProductQuery = `UPDATE products SET quantity = quantity - ? WHERE id = ?`;
+                                    database.run(updateProductQuery, [item.quantity, item.productID], function (err) {
+                                        if (err) reject(err);
+                                        else resolve();
+                                    });
+                                });
+                            });
+
+                            Promise.all(updateQuantities)
+                                .then(() => {
+                                    const updateSaleQuery = `UPDATE sales SET items = ?, totalPrice = ?, status = ? WHERE id = ?`;
+                                    database.run(updateSaleQuery, [JSON.stringify(newItems), data.totalPrice, data.status, data.saleID], function (err) {
+                                        if (err) {
+                                            console.log('Error updating sale:', err.message);
+                                            reject({ success: false, error: err.message });
+                                        } else {
+                                            console.log('Sale updated successfully!');
+                                            resolve({ success: true });
+                                        }
+                                    });
+                                })
+                                .catch(err => {
+                                    console.log('Error updating product quantities:', err.message);
+                                    reject({ success: false, error: err.message });
+                                });
+                        })
+                        .catch(err => {
+                            console.log('Error reverting product quantities:', err.message);
+                            reject({ success: false, error: err.message });
+                        });
+                }
+            })
+        } else {
+            const newItems = Array.isArray(data.items) ? data.items : JSON.parse(data.items)
+            const updateQuantities = newItems.map(item => {
+                return new Promise((resolve, reject) => {
+                    const updateProductQuery = `UPDATE products SET quantity = quantity - ? WHERE id = ?`
+                    database.run(updateProductQuery, [item.quantity, item.product], function (err) {
+                        if (err) reject(err)
+                        else resolve()
+                    })
+                })
+            })
+            Promise.all(updateQuantities)
+                .then(() => {
+                    const insertSaleQuery = `INSERT INTO sales (customerID, items, status, createdAt) VALUES (?, ?, ?, CURRENT_TIMESTAMP)`;
+                    database.run(insertSaleQuery, [data.customerID, JSON.stringify(newItems), data.status  ? data.status : 'Completed'], function (err) {
                         if (err) {
-                            console.log('Error updating product quantity: ', err.message);
+                            console.log('Error inserting sale:', err.message);
                             reject({ success: false, error: err.message });
                         } else {
-                            console.log('Sale and product quantity updated successfully!');
+                            console.log('Sale and product quantities updated successfully!');
                             resolve({ success: true, lastID: this.lastID });
                         }
-                    });
-                }
-            });
+                    })
+                })
+                .catch(err => {
+                    console.log('Error updating product quantities:', err.message);
+                    reject({ success: false, error: err.message });
+                });
         }
-    });
-};
+    })
+}
 
 
 const deleteSale = (salesID) => {
@@ -777,7 +867,7 @@ const saveInvoice = (data) => {
                     console.log('Invoice updated successfully!');
                     resolve({ success: true });
                 }
-            });
+            })
         } else {
             const insertInvoiceQuery = `INSERT INTO invoices (customerID, items, status, createdAt) 
                                         VALUES (?, ?, ?, CURRENT_TIMESTAMP)`;
@@ -789,7 +879,43 @@ const saveInvoice = (data) => {
                     console.log('Invoice created successfully!');
                     resolve({ success: true, lastID: this.lastID });
                 }
-            });
+            })
         }
+    })
+}
+
+
+const fetchProductCostPrice = (productID) => {
+    return new Promise((resolve, reject) => {
+        const query = `SELECT purchasePrice FROM products WHERE id = ?`
+        database.get(query, [productID], (err, row) => {
+            if (err) {
+                console.log('Error fetching product cost price: ', err.message)
+                reject({ success: false, error: err.message })
+            } else {
+                resolve({ success: true, data: row })
+            }
+        })
+    })
+}
+
+
+const reduceProductStock = (data) => {
+    return new Promise((resolve, reject) => {
+        const query = `UPDATE products 
+                       SET quantity = quantity - ? 
+                       WHERE products.id = ? AND quantity >= ?`
+        database.run(query, [data.damagedQuantity, data.productID, data.damagedQuantity], function (err) {
+            if (err) {
+                console.log('Error reducing product stock: ', err.message);
+                reject({ success: false, error: err.message });
+            } else if (this.changes === 0) {
+                console.log('Insufficient stock to reduce');
+                resolve({ success: false, message: 'Insufficient stock to reduce' });
+            } else {
+                console.log('Product stock reduced successfully!');
+                resolve({ success: true });
+            }
+        });
     });
 };

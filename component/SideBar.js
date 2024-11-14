@@ -70,14 +70,14 @@ class SideBarComponent extends HTMLElement {
                                 <span class="nav-link-text ms-1" style="font-family: monRegular !important; font-size: 9pt">Stock</span>
                             </a>
                         </li>
-                        <li class="nav-item">
+                        <!-- <li class="nav-item">
                             <a class="nav-link navNavigationSidebar" href="#" page="invoice">
                                 <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
                                     <i class="fa-solid fa-maximize" style="color: #555; font-size: 12px"></i>
                                 </div>
                                 <span class="nav-link-text ms-1" style="font-family: monRegular !important; font-size: 9pt">Invoice</span>
                             </a>
-                        </li>
+                        </li> -->
                         <li class="nav-item">
                             <a class="nav-link navNavigationSidebar" href="#" page="customer">
                                 <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
@@ -85,6 +85,10 @@ class SideBarComponent extends HTMLElement {
                                 </div>
                                 <span class="nav-link-text ms-1" style="font-family: monRegular !important; font-size: 9pt">Customer</span>
                             </a>
+                        </li>
+                        <li style="padding-top: 100px;padding-left: 20px">
+                            <span id="date" style="font-family: monSemiBold !important; font-size: 8pt"></span><br />
+                            <span id="clock" style="font-family: monSemiBold !important; font-size: 9pt"></span>
                         </li>
                     </ul>
                 </div>
@@ -95,6 +99,8 @@ class SideBarComponent extends HTMLElement {
 
     connectedCallback() {
         this.#_addEvents()
+        this.#_updateClock()
+        setInterval(this.#_updateClock, 1000)
     }
 
     #_addEvents(){
@@ -110,6 +116,24 @@ class SideBarComponent extends HTMLElement {
                 })
             }
         }
+    }
+
+    #_updateClock() {
+        const now = new Date();
+
+        // Format the date as Day, Month DD, YYYY
+        const options = { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' };
+        const currentDate = now.toLocaleDateString(undefined, options);
+
+        // Format the time as HH:MM:SS
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const currentTime = `${hours}:${minutes}:${seconds}`;
+
+        // Display the date and time
+        document.getElementById('date').textContent = currentDate;
+        document.getElementById('clock').textContent = currentTime;
     }
 
     disconnectedCallback() {

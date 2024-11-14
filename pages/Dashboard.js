@@ -123,8 +123,8 @@ class DashboardComponent extends HTMLElement {
                                     <div class="row">
                                         <div class="col-8">
                                             <div class="numbers">
-                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Sales Amount</p>
-                                                <h5 class="font-weight-bolder mb-0" id="totalPurchasePrice">
+                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Revenue (GHS)</p>
+                                                <h5 class="font-weight-bolder mb-0" id="totalRevenue">
                                                     0
                                                 </h5>
                                             </div>
@@ -144,7 +144,28 @@ class DashboardComponent extends HTMLElement {
                                     <div class="row">
                                         <div class="col-8">
                                             <div class="numbers">
-                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Profit Amount</p>
+                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Cost (GHC)</p>
+                                                <h5 class="font-weight-bolder mb-0" id="totalCost">
+                                                    0
+                                                </h5>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
+                                                <i class="fa-solid fa-arrow-right" style="font-size: 20pt"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4 mt-3">
+                            <div class="card">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <div class="numbers">
+                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Profit (GHS)</p>
                                                 <h5 class="font-weight-bolder mb-0" id="totalProfit">
                                                     0
                                                 </h5>
@@ -159,43 +180,29 @@ class DashboardComponent extends HTMLElement {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4 mt-3">
-                            <div class="card">
-                                <div class="card-body p-3">
-                                    <div class="row">
-                                        <div class="col-8">
-                                            <div class="numbers">
-                                                <p class="text-sm mb-0 text-capitalize font-weight-bold" style="font-family: monRegular !important; color: #0275d8">Total Loss Amount</p>
-                                                <h5 class="font-weight-bolder mb-0" id="totalLoss">
-                                                    0
-                                                </h5>
-                                            </div>
-                                        </div>
-                                        <div class="col-4 text-end">
-                                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
-                                                <i class="fa-solid fa-arrow-down" style="font-size: 20pt"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    </div>
+                    <div class="mt-5" style="height: 500px; width: 100%">
+                        <div class="row">
+                            <div class="col-8">
+                                <canvas id="profitLossChart" width="1000" height="400"></canvas>
+                            </div>
+                            <div class="col">
+                                <table id="profitLossTable" class="table table-striped table-bordered mt-4">
+                                    <thead>
+                                        <tr>
+                                        <th>Date</th>
+                                        <th>Revenue</th>
+                                        <th>Cost</th>
+                                        <th>Profit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-5" style="height: 500px; width: 100%">
-                        <canvas id="profitLossChart" width="1000" height="400"></canvas>
-                    </div>
-                    <table id="profitLossTable" class="table table-striped table-bordered mt-4">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Profit</th>
-                                <th>Loss</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            
-                        </tbody>
-                    </table>
                 </div>
             </main>
         `)
@@ -300,9 +307,42 @@ class DashboardComponent extends HTMLElement {
             return {}; // Return an empty object in case of error
         }
     }
-    
-    
 
+    async #_fetchSalesDataForChart() {
+        try {
+            const salesResult = await fetchSales();
+            if (!salesResult.success) throw new Error('Failed to fetch sales data');
+    
+            const productsMap = (await getProducts()).data.reduce((map, product) => {
+                map[product.id] = product;
+                return map;
+            }, {});
+    
+            const profitLossData = {};
+    
+            for (const sale of salesResult.data) {
+                const items = JSON.parse(sale.items);
+                const date = new Date(sale.createdAt).toISOString().split('T')[0]; // Format date as YYYY-MM-DD
+    
+                if (!profitLossData[date]) profitLossData[date] = { revenue: 0, cost: 0 };
+    
+                for (const item of items) {
+                    const saleRevenue = Number(item.productprice) * Number(item.quantity);
+                    const product = productsMap[item.product];
+                    const saleCost = product ? product.purchasePrice * item.quantity : 0;
+    
+                    profitLossData[date].revenue += saleRevenue;
+                    profitLossData[date].cost += saleCost;
+                }
+            }
+            return profitLossData;
+        } catch (error) {
+            console.error('Error fetching sales data for chart:', error.message);
+            return {};
+        }
+    }    
+    
+    
     async #_loadDashboardData() {
         try {
             // Fetch product categories
@@ -334,68 +374,125 @@ class DashboardComponent extends HTMLElement {
                 document.getElementById('totalSales').textContent = salesResultC.data.length || 0
             }
 
-            const salesResult = await fetchSales(); // Adjust this to your actual sales fetch function
+            const salesResult = await fetchSales()
             if (salesResult.success) {
-                const totalSales = salesResult.data.length || 0;
-                document.getElementById('totalSales').textContent = totalSales;
-
-                // Calculate total profit and loss
-                let totalProfit = 0;
-                let totalLoss = 0;
-
+                let totalRevenue = 0
+                let totalCost = 0
+                let totalProfit = 0
                 for (let i = 0; i < salesResult.data.length; i++) {
-                    const sale = salesResult.data[i];
-                    let total = sale.purchasePrice * sale.quantity
-                    if (sale.totalPrice > total) {
-                        totalProfit += Number(sale.totalPrice - total)
-                    } else {
-                        totalLoss += Number(total - sale.totalPrice)
+                    const sale = salesResult.data[i]
+                    const items = JSON.parse(sale.items)
+                    for (let j = 0; j < items.length; j++) {
+                        const item = items[j]
+                        const saleRevenue = Number(item.productprice) * Number(item.quantity)
+                        const productResult = await fetchProductCostPrice(item.product)
+                        const productCostPrice = productResult.success ? productResult.data.purchasePrice : 0
+                        const saleCost = productCostPrice * item.quantity
+                        totalRevenue += saleRevenue
+                        totalCost += saleCost
                     }
                 }
-
+                
+                // Calculate total profit
+                totalProfit = totalRevenue - totalCost;
+                
+                // Display total revenue, total cost, and total profit
+                // console.log('Total Revenue: ', totalRevenue.toFixed(2))
+                // console.log('Total Cost: ', totalCost.toFixed(2))
+                // console.log('Total Profit: ', totalProfit.toFixed(2))
+                
+                // You can also display it in your dashboard if needed
+                document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+                document.getElementById('totalCost').textContent = totalCost.toFixed(2);
                 document.getElementById('totalProfit').textContent = totalProfit.toFixed(2);
-                document.getElementById('totalLoss').textContent = totalLoss.toFixed(2);
             }
 
-
-            const salesResult2 = await fetchSales(); // Adjust this to your actual sales fetch function
-            if (salesResult2.success) {
-                const totalSales = salesResult2.data.length || 0;
-                document.getElementById('totalSales').textContent = totalSales
-
-                const totalRevenue = salesResult2.data.reduce((sum, sale) => sum + sale.totalPrice, 0);
-                document.getElementById('totalPurchasePrice').textContent = totalRevenue.toFixed(2); // Make sure to create an element with this ID
-            }
         } catch (error) {
             console.error('Error loading dashboard data:', error)
         }
     }
 
+    // async #_renderSalesChart() {
+    //     const profitLossData = await this.#_fetchSalesData();
+    
+    //     // Prepare data for the chart
+    //     const labels = Object.keys(profitLossData); // Months
+    //     const profits = labels.map(month => profitLossData[month].profit);
+    //     const losses = labels.map(month => profitLossData[month].loss);
+    
+    //     // Create the line chart
+    //     const ctx = document.getElementById('profitLossChart').getContext('2d');
+    //     const profitLossChart = new Chart(ctx, {
+    //         type: 'line',
+    //         data: {
+    //             labels: labels,
+    //             datasets: [
+    //                 {
+    //                     label: 'Profit',
+    //                     data: profits,
+    //                     borderColor: '#5cb85c',
+    //                     fill: false,
+    //                     tension: 0.1,
+    //                 },
+    //                 {
+    //                     label: 'Loss',
+    //                     data: losses,
+    //                     borderColor: '#d9534f',
+    //                     fill: false,
+    //                     tension: 0.1,
+    //                 }
+    //             ],
+    //         },
+    //         options: {
+    //             scales: {
+    //                 y: {
+    //                     beginAtZero: true,
+    //                 }
+    //             },
+    //             plugins: {
+    //                 legend: {
+    //                     display: true,
+    //                 },
+    //                 tooltip: {
+    //                     enabled: true,
+    //                     mode: 'index', // This shows the tooltip for all datasets at the hovered index
+    //                     intersect: false, // Tooltips will show on hover without needing to be directly over a point
+    //                     callbacks: {
+    //                         label: function(tooltipItem) {
+    //                             const label = tooltipItem.dataset.label || '';
+    //                             const value = tooltipItem.raw || 0;
+    //                             return `${label}: GHC ${value.toFixed(2)}`; // Format the tooltip
+    //                         }
+    //                     }
+    //                 },
+    //             },
+    //         }
+    //     });
+    //     this.#_populateProfitLossTable(profitLossData)
+    // }
+
     async #_renderSalesChart() {
-        const profitLossData = await this.#_fetchSalesData();
+        const profitLossData = await this.#_fetchSalesDataForChart();
+        const labels = Object.keys(profitLossData);
+        const revenueData = labels.map(date => profitLossData[date].revenue);
+        const costData = labels.map(date => profitLossData[date].cost);
     
-        // Prepare data for the chart
-        const labels = Object.keys(profitLossData); // Months
-        const profits = labels.map(month => profitLossData[month].profit);
-        const losses = labels.map(month => profitLossData[month].loss);
-    
-        // Create the line chart
         const ctx = document.getElementById('profitLossChart').getContext('2d');
-        const profitLossChart = new Chart(ctx, {
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Profit',
-                        data: profits,
+                        label: 'Revenue',
+                        data: revenueData,
                         borderColor: '#5cb85c',
                         fill: false,
                         tension: 0.1,
                     },
                     {
-                        label: 'Loss',
-                        data: losses,
+                        label: 'Cost',
+                        data: costData,
                         borderColor: '#d9534f',
                         fill: false,
                         tension: 0.1,
@@ -406,21 +503,23 @@ class DashboardComponent extends HTMLElement {
                 scales: {
                     y: {
                         beginAtZero: true,
+                        title: { display: true, text: 'Amount (GHC)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Date' }
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: true,
-                    },
+                    legend: { display: true },
                     tooltip: {
                         enabled: true,
-                        mode: 'index', // This shows the tooltip for all datasets at the hovered index
-                        intersect: false, // Tooltips will show on hover without needing to be directly over a point
+                        mode: 'index',
+                        intersect: false,
                         callbacks: {
                             label: function(tooltipItem) {
                                 const label = tooltipItem.dataset.label || '';
                                 const value = tooltipItem.raw || 0;
-                                return `${label}: GHC ${value.toFixed(2)}`; // Format the tooltip
+                                return `${label}: GHC ${value.toFixed(2)}`;
                             }
                         }
                     },
@@ -429,6 +528,31 @@ class DashboardComponent extends HTMLElement {
         });
         this.#_populateProfitLossTable(profitLossData)
     }
+    
+
+    // #_populateProfitLossTable(profitLossData) {
+    //     const tableBody = document.querySelector('#profitLossTable tbody');
+    //     tableBody.innerHTML = ''; // Clear previous data
+    
+    //     // Populate the table rows
+    //     for (const date in profitLossData) {
+    //         const row = document.createElement('tr');
+    
+    //         const dateCell = document.createElement('td');
+    //         dateCell.textContent = date; // Date in format 'MM/DD/YYYY'
+    //         row.appendChild(dateCell);
+    
+    //         const profitCell = document.createElement('td');
+    //         profitCell.textContent = `$${profitLossData[date].profit.toFixed(2)}`;
+    //         row.appendChild(profitCell);
+    
+    //         const lossCell = document.createElement('td');
+    //         lossCell.textContent = `$${profitLossData[date].loss.toFixed(2)}`;
+    //         row.appendChild(lossCell);
+    
+    //         tableBody.appendChild(row);
+    //     }
+    // }
 
     #_populateProfitLossTable(profitLossData) {
         const tableBody = document.querySelector('#profitLossTable tbody');
@@ -439,20 +563,26 @@ class DashboardComponent extends HTMLElement {
             const row = document.createElement('tr');
     
             const dateCell = document.createElement('td');
-            dateCell.textContent = date; // Date in format 'MM/DD/YYYY'
+            dateCell.textContent = date; // Date in format 'YYYY-MM-DD'
             row.appendChild(dateCell);
     
-            const profitCell = document.createElement('td');
-            profitCell.textContent = `$${profitLossData[date].profit.toFixed(2)}`;
-            row.appendChild(profitCell);
+            const revenueCell = document.createElement('td');
+            revenueCell.textContent = `GHC ${profitLossData[date].revenue.toFixed(2)}`;
+            row.appendChild(revenueCell);
     
-            const lossCell = document.createElement('td');
-            lossCell.textContent = `$${profitLossData[date].loss.toFixed(2)}`;
-            row.appendChild(lossCell);
+            const costCell = document.createElement('td');
+            costCell.textContent = `GHC ${profitLossData[date].cost.toFixed(2)}`;
+            row.appendChild(costCell);
+    
+            const profitCell = document.createElement('td');
+            const profit = profitLossData[date].revenue - profitLossData[date].cost;
+            profitCell.textContent = `GHC ${profit.toFixed(2)}`;
+            row.appendChild(profitCell);
     
             tableBody.appendChild(row);
         }
     }
+    
     
 
     disconnectedCallback() {

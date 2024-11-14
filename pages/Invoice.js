@@ -180,7 +180,6 @@ class ProformaInvoiceComponent extends HTMLElement {
             result.data.forEach((invoice) => {
                 const row = document.createElement('tr')
                 const items = invoice.items && Array.isArray(invoice.items) ? invoice.items : JSON.parse(invoice.items)
-                console.log({items})
                 row.innerHTML = String.raw`
                     <td>${invoice.id}</td>
                     <td>${invoice.customerName}</td>
@@ -302,9 +301,7 @@ class ProformaInvoiceComponent extends HTMLElement {
     #_renderInvoiceItems() {
         const invoiceItemsTableBody = this.querySelector('#invoiceItemsTableBody')
         invoiceItemsTableBody.innerHTML = ''
-
         this.invoiceItems.forEach((item, index) => {
-            console.log(item)
             const row = document.createElement('tr')
             row.innerHTML = `
                 <td>${item.productname}</td>

@@ -20,7 +20,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
         db.run(`CREATE TABLE IF NOT EXISTS account (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT,
-            password TEXT
+            password TEXT,
+            privs TEXT
         )`, (err) => {
             if (err) {
                 console.log("Error creating table:", err.message)
@@ -31,7 +32,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
                     } else if (row.count === 0) {
                         const defaultName = 'admin'
                         const defaultPassword = 'password123'
-                        db.run(`INSERT INTO account (username, password) VALUES (?, ?)`, [defaultName, defaultPassword], function(err) {
+                        const privs = ['assignPrivs']
+                        db.run(`INSERT INTO account (username, password, privs) VALUES (?, ?, ?)`, [defaultName, defaultPassword, JSON.stringify(privs)], function(err) {
                             if (err) {
                                 console.log("Error inserting default account:", err.message);
                             } else {

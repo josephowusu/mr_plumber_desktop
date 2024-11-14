@@ -27,6 +27,7 @@ class ProductComponent extends HTMLElement {
                                     <input type="text" class="form-control" placeholder="Type here...">
                                 </div>
                                 <button class="btn btn-success w-100" style="margin-top: 10px; margin-left: 10px" id="addProductStockingButton">Add Stock</button>
+                                <button class="btn btn-danger w-100" style="margin-top: 10px; margin-left: 10px" id="removeProductStockingButton">Remove Stock</button>
                             </div>
                         </div>
                     </div>
@@ -52,6 +53,38 @@ class ProductComponent extends HTMLElement {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal fade mt-5" id="productStockingRemoveModal" tabindex="-1" style="display: none;" aria-hidden="true">
+					<div class="modal-dialog" role="document">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h5 class="modal-title" id="exampleModalLabel1">Remove Stock Form</h5>
+								<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"><i class="fa-solid fa-xmark" style="color: #000; font-size: 12px;"></i></button>
+							</div>
+                            <form class="modal-body" id="modalProductStockingRemoveForm">
+								<div class="row">
+                                    <div class="col-12 mb-3">
+										<label for="productCategory" class="form-label" style="font-size: 10pt">Category</label>
+										<select id="productCategoryRemove" class="form-select p-3">
+										</select>
+									</div>
+                                    <div class="col-12 mb-3">
+                                        <label for="productID" class="form-label" style="font-size: 10pt">Product</label>
+                                        <select id="productIDRemove" class="form-select p-3">
+                                        </select>
+                                    </div>
+                                    <div class="col-12 mb-3">
+										<label for="purchaseQuantityRemove" class="form-label" style="font-size: 10pt">Quantity</label>
+										<input type="number" step="0.1" id="purchaseQuantityRemove" class="form-control p-3" placeholder="Quantity">
+									</div>
+                                </div>
+                            </form>
+                            <div class="modal-footer">
+								<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+								<button type="button" class="btn btn-success" id="removeButtonProductStocking">Remove</button>
+							</div>
                         </div>
                     </div>
                 </div>
@@ -122,6 +155,55 @@ class ProductComponent extends HTMLElement {
 				modal.show()
 			})
 		}
+
+        const removeProductStockingButton = document.querySelector(`#removeProductStockingButton`)
+		if (removeProductStockingButton) {
+			removeProductStockingButton.addEventListener('click', (e) => {
+				e.preventDefault()
+				const modalForm = document.getElementById('modalProductStockingRemoveForm')
+				if (modalForm) modalForm.reset()
+				this.productId = null
+				const modal = new bootstrap.Modal(document.getElementById('productStockingRemoveModal'))
+				modal.show()
+			})
+		}
+
+        const removeButtonProductStocking = document.getElementById('removeButtonProductStocking')
+        if (removeButtonProductStocking) {
+            removeButtonProductStocking.addEventListener('click', async (e) => {
+                e.preventDefault()
+                const productIDRemove = document.getElementById('productIDRemove').value
+                const purchaseQuantityRemove = document.getElementById('purchaseQuantityRemove').value
+                if (productIDRemove && purchaseQuantityRemove) {
+                    try {
+                        Swal.fire({
+                            title: 'Product',
+                            text: 'Removing stock',
+                            icon: 'success'
+                        })
+                        let save = await reduceProductStock({ productID: productIDRemove, damagedQuantity: purchaseQuantityRemove })
+                        if (save.success) {
+                            Swal.fire({
+                                title: 'Product',
+                                text: 'Product re-Stocked successfully',
+                                icon: 'success'
+                            })
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('productStockingRemoveModal'))
+                            modal.hide()
+                            this.#_fetchProducts()
+                        } else {
+                            Swal.fire({
+                                title: 'Product',
+                                text: 'Error re-Stocking product',
+                                icon: 'error'
+                            })
+                        }
+                    }catch (err) {
+                        console.error(err.message)
+                    }
+                }
+            })
+        }
 
         const saveUpdateButton = document.getElementById('saveUpdateButtonProductStocking')
         if (saveUpdateButton) {
@@ -195,6 +277,26 @@ class ProductComponent extends HTMLElement {
                 }
             })
         }
+
+        const categorySelectRemove = document.getElementById('productCategoryRemove')
+        if (categorySelectRemove) {
+            categorySelectRemove.addEventListener('change', async (e) => {
+                e.preventDefault()
+                try {
+                    const selectedCategory = e.target.value
+                    const data = await fetchProductByProductCategory(Number(selectedCategory))
+                    if (data.success) {
+                        let options = `<option value="" disabled selected>Select a product</option>`
+                        for (let i = 0; i < data.data.length; i++) {
+                            options += `<option value="${data.data[i].id}">${data.data[i].name}</option>`
+                        }
+                        document.getElementById('productIDRemove').innerHTML = options
+                    }
+                }  catch (err) {
+                    console.error(err.message)
+                }
+            })
+        }
     }
 
     async #_fetchProducts() {
@@ -240,6 +342,7 @@ class ProductComponent extends HTMLElement {
                     options += `<option value="${data.data[i].id}">${data.data[i].name}</option>`
                 }
                 document.getElementById('productCategory').innerHTML = options
+                document.getElementById('productCategoryRemove').innerHTML = options
             }
         } catch (err) {
             console.error(err.message)
