@@ -22,7 +22,7 @@
       "**/*"
     ],
     "directories": {
-      "output": "dist"
+      "output": "dist" 
     }
   },
   "keywords": [],
